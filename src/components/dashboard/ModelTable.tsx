@@ -72,8 +72,8 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                       {typeof model.name === 'string' ? model.name.split(" ").map(n => n[0]).join("").substring(0, 2) : "M"}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{model.name}</p>
-                      <p className="text-[10px] text-slate-500">@{model.nickname || "sin_apodo"}</p>
+                      <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{String(model.name || "Sin nombre")}</p>
+                      <p className="text-[10px] text-slate-500">@{String(model.nickname || "sin_apodo")}</p>
                     </div>
                   </div>
                 </td>
