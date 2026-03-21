@@ -50,18 +50,18 @@ export function calculateProfileProgress(profile: ProfileData | null | undefined
   totalWeight += 25;
 
   // 3. Kinks, Toys, Outfits - 30% (10% each)
-  if (profile.selectedKinks && profile.selectedKinks.length > 0) accumulatedPoints += 10;
-  if (profile.selectedToys && profile.selectedToys.length > 0) accumulatedPoints += 10;
-  if (profile.selectedOutfits && profile.selectedOutfits.length > 0) accumulatedPoints += 10;
+  if (Array.isArray(profile.selectedKinks) && profile.selectedKinks.length > 0) accumulatedPoints += 10;
+  if (Array.isArray(profile.selectedToys) && profile.selectedToys.length > 0) accumulatedPoints += 10;
+  if (Array.isArray(profile.selectedOutfits) && profile.selectedOutfits.length > 0) accumulatedPoints += 10;
   totalWeight += 30;
 
   // 4. Hashtags - 10% (Should have 5)
-  const hashtagsCount = profile.selectedHashtags?.length || 0;
+  const hashtagsCount = Array.isArray(profile.selectedHashtags) ? profile.selectedHashtags.length : 0;
   accumulatedPoints += Math.min(hashtagsCount / 5, 1) * 10;
   totalWeight += 10;
 
   // 5. General Info (Age, Experience) - 10%
-  if (profile.age) accumulatedPoints += 5;
+  if (profile.age && profile.age !== "") accumulatedPoints += 5;
   if (profile.experience && profile.experience !== "") accumulatedPoints += 5;
   totalWeight += 10;
 
