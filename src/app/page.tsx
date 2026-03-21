@@ -32,6 +32,11 @@ export default function Home() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -121,6 +126,8 @@ export default function Home() {
     }
     return matchesSearch;
   });
+
+  if (!isMounted) return null;
 
   return (
     <div className="space-y-6">
