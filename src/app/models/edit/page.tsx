@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { saveProfileHistory } from "@/lib/history";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import glossaryData from "@/data/glossary.json";
 import toysData from "@/data/toys.json";
@@ -48,6 +49,7 @@ function EditProfileContent() {
   const [selectedToys, setSelectedToys] = useState<string[]>([]);
   const [selectedHashtags, setSelectedHashtags] = useState<string[]>([]);
   const [selectedOutfits, setSelectedOutfits] = useState<string[]>([]);
+  const [customOutfits, setCustomOutfits] = useState<string[]>([]);
   const [physicalAttributes, setPhysicalAttributes] = useState<{[key: string]: string}>({});
   
   const [generalInfo, setGeneralInfo] = useState({
@@ -91,7 +93,10 @@ function EditProfileContent() {
           if (pData.selectedKinks) setSelectedKinks(pData.selectedKinks);
           if (pData.selectedToys) setSelectedToys(pData.selectedToys);
           if (pData.selectedHashtags) setSelectedHashtags(pData.selectedHashtags);
-          if (pData.selectedOutfits) setSelectedOutfits(pData.selectedOutfits);
+          if (pData.selectedOutfits) {
+            setSelectedOutfits(pData.selectedOutfits);
+            if (pData.customOutfits) setCustomOutfits(pData.customOutfits);
+          }
           if (pData.physicalAttributes) setPhysicalAttributes(pData.physicalAttributes);
           if (pData.credentials) setPlatformCredentials(pData.credentials);
         }
@@ -123,18 +128,24 @@ function EditProfileContent() {
     setIsSaving(true);
     try {
       const profileRef = doc(db, "modelos_profile_v2", id);
-      await setDoc(profileRef, {
+      const profileData = {
         modelId: id,
         updatedAt: new Date().toISOString(),
         selectedKinks,
         selectedToys,
         selectedHashtags,
         selectedOutfits,
+        customOutfits,
         physicalAttributes,
         credentials: platformCredentials,
         generalInfo,
         progress: progress // Store current progress
-      }, { merge: true });
+      };
+      
+      await setDoc(profileRef, profileData, { merge: true });
+      
+      // Guardar snapshot histórico
+      await saveProfileHistory(id, profileData);
       
       setSaveStatus("¡Perfil actualizado correctamente!");
       setTimeout(() => {

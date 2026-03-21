@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { saveProfileHistory } from "@/lib/history";
 import glossaryData from "@/data/glossary.json";
 import toysData from "@/data/toys.json";
 import attributesData from "@/data/attributes.json";
@@ -33,6 +34,8 @@ interface OutfitItem {
   name: string;
   description: string;
 }
+
+import { calculateProfileProgress, ProfileData } from "@/lib/utils";
 
 export default function ModelEditPage() {
   const { id } = useParams();
@@ -92,9 +95,12 @@ export default function ModelEditPage() {
           if (pData.selectedKinks) setSelectedKinks(pData.selectedKinks);
           if (pData.selectedToys) setSelectedToys(pData.selectedToys);
           if (pData.selectedHashtags) setSelectedHashtags(pData.selectedHashtags);
-          if (pData.selectedOutfits) setSelectedOutfits(pData.selectedOutfits);
+          if (pData.selectedOutfits) {
+            setSelectedOutfits(pData.selectedOutfits);
+            if (pData.customOutfits) setCustomOutfits(pData.customOutfits);
+          }
           if (pData.physicalAttributes) setPhysicalAttributes(pData.physicalAttributes);
-          if (pData.platformCredentials) setPlatformCredentials(pData.platformCredentials);
+          if (pData.credentials) setPlatformCredentials(pData.credentials);
         }
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -105,25 +111,45 @@ export default function ModelEditPage() {
     loadModelData();
   }, [id]);
 
+  const progress = useMemo(() => {
+    return calculateProfileProgress({
+      physicalAttributes,
+      credentials: platformCredentials as any,
+      selectedKinks,
+      selectedToys,
+      selectedOutfits,
+      selectedHashtags,
+      targetPlatforms: generalInfo.targetPlatforms,
+      age: generalInfo.age,
+      experience: generalInfo.experience
+    });
+  }, [physicalAttributes, platformCredentials, selectedKinks, selectedToys, selectedOutfits, selectedHashtags, generalInfo]);
+
   const handleUpdateProfile = async () => {
     setIsSaving(true);
     try {
       const profileRef = doc(db, "modelos_profile_v2", id as string);
-      await setDoc(profileRef, {
+      const profileData = {
         modelId: id,
         updatedAt: new Date().toISOString(),
         selectedKinks,
         selectedToys,
         selectedHashtags,
         selectedOutfits,
+        customOutfits,
         physicalAttributes,
-        platformCredentials,
-        generalInfo
-      }, { merge: true });
+        credentials: platformCredentials, // Fixed: Standardized field name
+        generalInfo,
+        progress: progress // Store current progress
+      };
+
+      await setDoc(profileRef, profileData, { merge: true });
       
-      setSaveStatus("¡Perfil actualizado correctamente!");
+      // Guardar snapshot histórico
+      await saveProfileHistory(id as string, profileData);
+      
+      setSaveStatus("¡Perfil actualizado!");
       setTimeout(() => {
-        setSaveStatus(null);
         router.push(`/models/${id}`);
       }, 2000);
     } catch (err) {

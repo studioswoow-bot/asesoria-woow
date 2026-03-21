@@ -9,7 +9,8 @@ import hashtagsData from "@/data/hashtags.json";
 import outfitsData from "@/data/outfits.json";
 import { useRouter } from "next/navigation";
 import { db } from "@/lib/firebase";
-import { doc, setDoc, collection, getDocs, query } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs, query } from "firebase/firestore";
+import { saveProfileHistory } from "@/lib/history";
 import { usePlatforms } from "@/context/PlatformContext";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { useEffect } from "react";
@@ -99,10 +100,12 @@ export default function ModelRegistrationPage() {
     });
   }, [physicalAttributes, platformCredentials, selectedKinks, selectedToys, selectedOutfits, selectedHashtags, generalInfo]);
 
-  const handleModelSelect = (id: string) => {
+  const handleModelSelect = async (id: string) => {
     const model = existingModels.find(m => m.id === id);
     if (model) {
       setSelectedModelId(id);
+      
+      // 1. Cargar info básica de la colección 'models' (PROPIEDAD DE 7208E - SÓLO LECTURA)
       const modelPlatforms = model.platforms || [];
       
       setGeneralInfo(prev => ({
@@ -114,24 +117,69 @@ export default function ModelRegistrationPage() {
         targetPlatforms: modelPlatforms
       }));
 
-      // Initialize credentials for the synced platforms
-      const syncedCredentials: {[key: string]: { apiKey: string, username: string }} = {};
-      modelPlatforms.forEach((p: string) => {
-        syncedCredentials[p] = platformCredentials[p] || { apiKey: "", username: "" };
-      });
-      setPlatformCredentials(syncedCredentials);
+      // 2. Intentar cargar info complementada de 'modelos_profile_v2' (NUESTRA COLECCIÓN)
+      try {
+        const profileSnap = await getDoc(doc(db, "modelos_profile_v2", id));
+        if (profileSnap.exists()) {
+          const profileData = profileSnap.data();
+          
+          if (profileData.physicalAttributes) setPhysicalAttributes(profileData.physicalAttributes);
+          if (profileData.selectedKinks) setSelectedKinks(profileData.selectedKinks);
+          if (profileData.selectedToys) setSelectedToys(profileData.selectedToys);
+          if (profileData.selectedHashtags) setSelectedHashtags(profileData.selectedHashtags);
+          if (profileData.selectedOutfits) {
+            setSelectedOutfits(profileData.selectedOutfits);
+            // También cargar outfits personalizados si existen
+            if (profileData.customOutfits) setCustomOutfits(profileData.customOutfits);
+          }
+          
+          // Cargar credenciales si existen
+          if (profileData.credentials) {
+            setPlatformCredentials(profileData.credentials);
+          } else {
+            // Inicializar credenciales para las plataformas sincronizadas si no hay guardadas
+            const syncedCredentials: {[key: string]: { apiKey: string, username: string }} = {};
+            modelPlatforms.forEach((p: string) => {
+              syncedCredentials[p] = { apiKey: "", username: "" };
+            });
+            setPlatformCredentials(syncedCredentials);
+          }
+        } else {
+          // Si no hay perfil, inicializar credenciales vacías para las plataformas de la modelo
+          const syncedCredentials: {[key: string]: { apiKey: string, username: string }} = {};
+          modelPlatforms.forEach((p: string) => {
+            syncedCredentials[p] = { apiKey: "", username: "" };
+          });
+          setPlatformCredentials(syncedCredentials);
+          
+          // Limpiar otros campos complementarios
+          setPhysicalAttributes({});
+          setSelectedKinks([]);
+          setSelectedToys([]);
+          setSelectedHashtags([]);
+          setSelectedOutfits([]);
+          setCustomOutfits([]);
+        }
+      } catch (err) {
+        console.error("Error al cargar perfil complementario:", err);
+      }
 
     } else {
       setSelectedModelId("");
-      setGeneralInfo(prev => ({
-        ...prev,
-        artisticName: "",
+      setGeneralInfo({
         realName: "",
+        artisticName: "",
         age: "",
         experience: "nuevo",
         targetPlatforms: []
-      }));
+      });
       setPlatformCredentials({});
+      setPhysicalAttributes({});
+      setSelectedKinks([]);
+      setSelectedToys([]);
+      setSelectedHashtags([]);
+      setSelectedOutfits([]);
+      setCustomOutfits([]);
     }
   };
 
@@ -988,19 +1036,27 @@ export default function ModelRegistrationPage() {
               }
               setIsSaving(true);
               try {
-                await setDoc(doc(db, "modelos_profile_v2", selectedModelId), {
+                const profileData = {
                   modelId: selectedModelId,
-                  ...generalInfo,
+                  generalInfo,
                   credentials: platformCredentials,
                   physicalAttributes,
                   selectedKinks,
                   selectedToys,
                   selectedHashtags,
                   selectedOutfits,
-                  progress, // Store current progress
-                  createdAt: new Date().toISOString()
-                });
-                setSaveStatus("¡Modelo registrada con éxito!");
+                  customOutfits,
+                  progress,
+                  updatedAt: new Date().toISOString()
+                };
+
+                // Guardar en la colección principal con merge para no sobrescribir info accidentalmente
+                await setDoc(doc(db, "modelos_profile_v2", selectedModelId), profileData, { merge: true });
+                
+                // Guardar snapshot histórico
+                await saveProfileHistory(selectedModelId, profileData);
+
+                setSaveStatus("¡Información guardada y sincronizada correctamente!");
                 setTimeout(() => router.push("/"), 2000);
               } catch (e) {
                 alert("Error al guardar: " + e);
