@@ -1,0 +1,107 @@
+[
+  {
+    "category": "Etnia a trabajar",
+    "options": [
+      "Arabe",
+      "India",
+      "Latina",
+      "Blanca",
+      "Asiatica",
+      "Negra"
+    ]
+  },
+  {
+    "category": "Tipo de Cabello",
+    "options": [
+      "Ondulado",
+      "Liso",
+      "Rizado",
+      "Rapado",
+      "Peluca"
+    ]
+  },
+  {
+    "category": "Color de Cabello",
+    "options": [
+      "Negro",
+      "Rubio",
+      "Cartaño",
+      "Rojo",
+      "Colorido"
+    ]
+  },
+  {
+    "category": "Color de Ojos",
+    "options": [
+      "Negro",
+      "Marron",
+      "Verde",
+      "Azul"
+    ]
+  },
+  {
+    "category": "Senos",
+    "options": [
+      "Plana",
+      "Pequeños",
+      "Medianos",
+      "Grande",
+      "Muy Grande"
+    ]
+  },
+  {
+    "category": "Nalga",
+    "options": [
+      "Plana",
+      "Pequeños",
+      "Medianos",
+      "Grande",
+      "Muy Grande"
+    ]
+  },
+  {
+    "category": "Estatura",
+    "options": [
+      "1.40m - 1.55m",
+      "1.56m - 1.65m",
+      "1.66m- 1.80m",
+      "1.81m o mas"
+    ]
+  },
+  {
+    "category": "Peso",
+    "options": [
+      "35Kg- 50Kg",
+      "51Kg - 60Kg",
+      "61Kg - 75Kg",
+      "75Kg - o mas"
+    ]
+  },
+  {
+    "category": "Vello pubico",
+    "options": [
+      "Depilado",
+      "Recortado",
+      "Varios dias",
+      "Muy abundante"
+    ]
+  },
+  {
+    "category": "Tatuajes",
+    "options": [
+      "Muchos",
+      "Pocos",
+      "Uno",
+      "Ninguno"
+    ]
+  },
+  {
+    "category": "Piercings",
+    "options": [
+      "Muchos",
+      "Pocos",
+      "Uno",
+      "Ninguno"
+    ]
+  }
+]

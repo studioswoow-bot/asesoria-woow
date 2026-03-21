@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #8F1F4E;
+  --color-primary-light: #B23A6A;
+  --color-background-dark: #1A1418;
+  --color-panel-dark: #281C22;
+  --color-sidebar-dark: #120C0F;
+  --color-accent-gold: #D4AF37;
+
+  --font-display: "Poppins", sans-serif;
+  --font-sans: "Inter", sans-serif;
+
+  --radius-DEFAULT: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background-dark text-slate-100 font-sans min-h-screen;
+  }
+}
+@layer utilities {
+  @keyframes loading-bar {
+    0% { transform: translateX(-100%); }
+    50% { transform: translateX(0); }
+    100% { transform: translateX(100%); }
+  }
+
+  .animate-loading-bar {
+    animation: loading-bar 2s ease-in-out infinite;
+  }
+}

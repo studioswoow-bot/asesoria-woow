@@ -1,0 +1,86 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==========================================
+    // FUNCIONES DE SEGURIDAD (App Original)
+    // ==========================================
+    function isStaff() {
+      return request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'monitor');
+    }
+
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // ==========================================
+    // COLECCIONES COMPARTIDAS / CONECTADAS
+    // ==========================================
+    
+    match /models/{modelId} {
+      allow read: if true; 
+      allow write: if true; // ⚠️ Temporalmente abierto para permitir la sincronización automatizada de Chaturbate
+    }
+
+    match /daily_metrics/{metricId} {
+      allow read: if true;
+      allow write: if true; // ⚠️ Permitir registro automático de tokens desde API
+      allow delete: if isAdmin();
+    }
+
+    match /chaturbate_logs/{logId} {
+      allow read, write: if true; // Auditoría de sincronización
+    }
+
+    // ==========================================
+    // NUEVAS COLECCIONES (App Registro & Analytics)
+    // ==========================================
+    
+    match /modelos_action_plans_v2/{planId} {
+      allow read, write: if true;
+    }
+    
+    match /modelos_profile_v2/{profileId} {
+      allow read, write: if true;
+    }
+    
+    match /modelos_api_integrations/{apiId} {
+      allow read, write: if true;
+    }
+
+    // ==========================================
+    // COLECCIONES PRIVADAS (App Original)
+    // ==========================================
+    
+    match /users/{userId} {
+      // FIX: Añadida verificación de autenticación al list para evitar enumeración de emails
+      allow list: if request.auth != null
+                  && request.query.limit <= 1 
+                  && request.query.filters.size() == 1
+                  && request.query.filters[0].op == '==' 
+                  && request.query.filters[0].field == 'username';
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    match /work_hours/{hourId} {
+      allow read: if true;
+      allow write: if true;
+      allow delete: if isAdmin() || isStaff();
+    }
+    
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    match /{document=**} {
+      // Bloqueo por defecto para rutas protegidas si no hay auth
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+  }
+}

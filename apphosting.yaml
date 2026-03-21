@@ -1,0 +1,22 @@
+# Configuración de Firebase App Hosting
+kind: "apphosting.yaml"
+version: "v1"
+
+# Variables de entorno para el backend (Next.js SSR / API Routes)
+env:
+  - variable: FIREBASE_PROJECT_ID
+    value: "estudioswoow-7288e"
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: "AIzaSyAdIcsycSKE2I-pMwB79DdWlp_x_8hdxbc"
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: "estudioswoow-7288e.firebaseapp.com"
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: "estudioswoow-7288e.firebasestorage.app"
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "621394494383"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: "1:621394494383:web:5b103638a7bcd759e1655a"
