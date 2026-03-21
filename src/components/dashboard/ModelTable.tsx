@@ -78,14 +78,14 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyles(model.status)}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusDot(model.status)}`}></span>
-                    {model.status}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyles(String(model.status))}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusDot(String(model.status))}`}></span>
+                    {String(model.status || "Sin estado")}
                   </span>
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex gap-1">
-                    <span className="px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded text-[9px] font-bold uppercase tracking-wider">{model.category || "General"}</span>
+                    <span className="px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded text-[9px] font-bold uppercase tracking-wider">{String(model.category || "General")}</span>
                   </div>
                 </td>
                 <td className="py-4 px-6 min-w-[140px]">
@@ -106,7 +106,7 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                     </span>
                   </div>
                 </td>
-                <td className="py-4 px-6 text-xs text-slate-400">{model.lastActive || "Desconocido"}</td>
+                <td className="py-4 px-6 text-xs text-slate-400">{model.lastActive ? String(model.lastActive) : "Desconocido"}</td>
                 <td className="py-4 px-6 text-center">
                   <div className="flex items-center justify-center gap-2">
                     <Link href={`/models/analytics?id=${model.id}`} className="p-2 text-slate-400 hover:text-accent-gold hover:bg-accent-gold/10 rounded-lg transition-all" title="Insights & Análisis">

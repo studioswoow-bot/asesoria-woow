@@ -61,7 +61,7 @@ export default function Home() {
             status: mData.status || "Inactiva",
             nickname: mData.nickname || "",
             ...mData,
-            progress: progress
+            progress: Number(progress)
           };
         }) as Model[];
 
@@ -127,21 +127,21 @@ export default function Home() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard 
           title="Total modelos" 
-          value={metrics.total.toString()} 
+          value={String(metrics.total)} 
           icon="group"
           trendValue="+12%"
           trendColor="emerald"
         />
         <MetricCard 
           title="En Proceso" 
-          value={metrics.inProcess.toString()} 
+          value={String(metrics.inProcess)} 
           icon="schedule"
           subtext={`${metrics.inProcess} pendientes`}
           trendColor="blue"
         />
         <MetricCard 
           title="Modelos activas" 
-          value={metrics.active.toString()} 
+          value={String(metrics.active)} 
           icon="check_circle"
           trendValue="+5%"
           trendColor="emerald"
