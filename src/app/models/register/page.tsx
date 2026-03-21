@@ -14,6 +14,7 @@ import { saveProfileHistory } from "@/lib/history";
 import { usePlatforms } from "@/context/PlatformContext";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { useEffect } from "react";
+import { calculateProfileProgress } from "@/lib/utils";
 
 interface GlossaryItem {
   term: string;
@@ -37,7 +38,7 @@ interface OutfitItem {
   description: string;
 }
 
-import { calculateProfileProgress, ProfileData } from "@/lib/utils";
+// Progress calculation moved to top imports
 
 export default function ModelRegistrationPage() {
   const router = useRouter();
@@ -106,7 +107,7 @@ export default function ModelRegistrationPage() {
       setSelectedModelId(id);
       
       // 1. Cargar info básica de la colección 'models' (PROPIEDAD DE 7208E - SÓLO LECTURA)
-      const modelPlatforms = model.platforms || [];
+      const modelPlatforms = Array.isArray(model.platforms) ? model.platforms : [];
       
       setGeneralInfo(prev => ({
         ...prev,
