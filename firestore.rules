@@ -46,6 +46,10 @@ service cloud.firestore {
     match /modelos_profile_v2/{profileId} {
       allow read, write: if true;
     }
+
+    match /modelos_profile_history_v2/{historyId} {
+      allow read, write: if true;
+    }
     
     match /modelos_api_integrations/{apiId} {
       allow read, write: if true;
