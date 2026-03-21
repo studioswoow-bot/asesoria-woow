@@ -101,10 +101,11 @@ export default function Home() {
 
   const filteredModels = models.filter(model => {
     const searchLower = searchQuery.toLowerCase();
+    const modelName = model.name || "";
     const matchesSearch = 
-      model.name.toLowerCase().includes(searchLower) || 
+      modelName.toLowerCase().includes(searchLower) || 
       (model.nickname && model.nickname.toLowerCase().includes(searchLower)) ||
-      model.id.toLowerCase().includes(searchLower);
+      (model.id && model.id.toLowerCase().includes(searchLower));
     
     if (activeFilter === "all") return matchesSearch;
     
