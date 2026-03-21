@@ -188,6 +188,41 @@ export default function ModelRegistrationPage() {
     setTimeout(() => setSaveStatus(null), 3000);
   };
 
+  const handleSectionSave = async (section: string) => {
+    if (!selectedModelId) {
+      alert("Debes seleccionar una modelo de la lista antes de guardar.");
+      return;
+    }
+
+    try {
+      // Build the full profile data to ensure consistency on each partial save
+      const profileData = {
+        modelId: selectedModelId,
+        generalInfo,
+        credentials: platformCredentials,
+        physicalAttributes,
+        selectedKinks,
+        selectedToys,
+        selectedHashtags,
+        selectedOutfits,
+        customOutfits,
+        progress,
+        updatedAt: new Date().toISOString()
+      };
+
+      // Use merge to avoid overwriting fields not currenty in the form logic
+      await setDoc(doc(db, "modelos_profile_v2", selectedModelId), profileData, { merge: true });
+      
+      // Save history record for this partial update
+      await saveProfileHistory(selectedModelId, profileData);
+
+      notifySave(section);
+    } catch (err) {
+      console.error(`Error al guardar ${section}:`, err);
+      alert(`Error al guardar: ${err}`);
+    }
+  };
+
   const handleGeneralInfoChange = (field: string, value: any) => {
     setGeneralInfo(prev => ({ ...prev, [field]: value }));
   };
@@ -660,7 +695,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Perfil general")}
+              onClick={() => handleSectionSave("Perfil general")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
@@ -708,7 +743,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Atributos físicos")}
+              onClick={() => handleSectionSave("Atributos físicos")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
@@ -756,7 +791,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Kinks & Habilidades")}
+              onClick={() => handleSectionSave("Kinks & Habilidades")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
@@ -832,7 +867,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Inventario de juguetes")}
+              onClick={() => handleSectionSave("Inventario de juguetes")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
@@ -949,7 +984,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Vestuario")}
+              onClick={() => handleSectionSave("Vestuario")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
@@ -1013,7 +1048,7 @@ export default function ModelRegistrationPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-primary/10 flex justify-end">
             <button 
               type="button"
-              onClick={() => notifySave("Hashtags")}
+              onClick={() => handleSectionSave("Hashtags")}
               className="flex items-center gap-2 px-6 py-3 bg-slate-900 dark:bg-primary text-white rounded-xl text-sm font-bold hover:scale-[1.02] transition-all active:scale-95 shadow-lg shadow-slate-900/10 dark:shadow-primary/20"
             >
               <span className="material-symbols-outlined text-sm">save</span>
