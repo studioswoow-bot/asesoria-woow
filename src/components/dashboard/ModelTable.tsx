@@ -69,7 +69,7 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/30 shrink-0 uppercase">
-                      {model.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
+                      {typeof model.name === 'string' ? model.name.split(" ").map(n => n[0]).join("").substring(0, 2) : "M"}
                     </div>
                     <div>
                       <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{model.name}</p>
