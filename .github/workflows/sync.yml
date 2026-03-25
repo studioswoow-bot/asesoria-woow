@@ -1,16 +1,30 @@
-name: Periodic Sync Chaturbate
+name: Aggressive Sync Chaturbate
 
 on:
   schedule:
-    # Se ejecuta cada 2 minutos (GitHub suele redondear a 5 min, pero configuramos 2)
-    - cron: '*/2 * * * *'
-  workflow_dispatch: # Permite ejecución manual desde GitHub
+    - cron: '*/5 * * * *' # Se activa cada 5 minutos
+  workflow_dispatch: # Permite ejecución manual
+
+# Evita que se amontonen las ejecuciones
+concurrency:
+  group: sync-chaturbate
+  cancel-in-progress: true
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Call Sync API
+      - name: Sync Loop (Cada 30 segundos)
         run: |
-          curl -X GET "https://asesoria.estudioswoow.com/api/sync-chaturbate" \
-          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"
+          for i in {1..10}
+          do
+            echo "Intento $i: Sincronizando..."
+            curl -s -X GET "https://asesoria.estudioswoow.com/api/sync-chaturbate" \
+                 -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+                 -o /dev/null -w "Status: %{http_code}\n"
+            
+            if [ $i -lt 10 ]; then
+              echo "Esperando 30 segundos para la siguiente vuelta..."
+              sleep 30
+            fi
+          done
