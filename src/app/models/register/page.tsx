@@ -63,6 +63,7 @@ export default function ModelRegistrationPage() {
   const [activeToy, setActiveToy] = useState<ToyItem | null>(null);
   const [activeHashtag, setActiveHashtag] = useState<HashtagItem | null>(null);
   const [activeOutfit, setActiveOutfit] = useState<OutfitItem | null>(null);
+  const [apiEnabledPlatforms, setApiEnabledPlatforms] = useState<string[]>([]);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [existingModels, setExistingModels] = useState<any[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
@@ -76,8 +77,15 @@ export default function ModelRegistrationPage() {
         const modelList = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        }));
-        setExistingModels(modelList);
+        })) as any[];
+
+        // Filtrar solo modelos activos (7288e)
+        const activeModels = modelList.filter(m => {
+          const s = (m.status || "").toLowerCase();
+          return s === "active" || s === "activa" || s === "activo" || s === "online";
+        });
+
+        setExistingModels(activeModels);
       } catch (error) {
         console.error("Error fetching models:", error);
       } finally {
@@ -88,6 +96,8 @@ export default function ModelRegistrationPage() {
   }, []);
 
   const progress = useMemo(() => {
+    if (!selectedModelId) return 0;
+    
     return calculateProfileProgress({
       physicalAttributes,
       credentials: platformCredentials as any,
@@ -96,74 +106,86 @@ export default function ModelRegistrationPage() {
       selectedOutfits,
       selectedHashtags,
       targetPlatforms: generalInfo.targetPlatforms,
+      apiEnabledPlatforms,
       age: generalInfo.age,
       experience: generalInfo.experience
     });
-  }, [physicalAttributes, platformCredentials, selectedKinks, selectedToys, selectedOutfits, selectedHashtags, generalInfo]);
+  }, [selectedModelId, physicalAttributes, platformCredentials, selectedKinks, selectedToys, selectedOutfits, selectedHashtags, generalInfo, apiEnabledPlatforms]);
 
   const handleModelSelect = async (id: string) => {
     const model = existingModels.find(m => m.id === id);
     if (model) {
       setSelectedModelId(id);
       
-      // 1. Cargar info básica de la colección 'models' (PROPIEDAD DE 7208E - SÓLO LECTURA)
       const modelPlatforms = Array.isArray(model.platforms) ? model.platforms : [];
       
-      setGeneralInfo(prev => ({
-        ...prev,
+      // Valores base desde la colección 'models' (App V1)
+      let initialGeneralInfo = {
         artisticName: model.nickname || model.name || "",
         realName: model.fullName || model.name || "",
         age: model.age || "",
         experience: model.experience || "nuevo",
         targetPlatforms: modelPlatforms
-      }));
+      };
 
-      // 2. Intentar cargar info complementada de 'modelos_profile_v2' (NUESTRA COLECCIÓN)
       try {
+        // Cargar info complementada de 'modelos_profile_v2' (NUESTRA COLECCIÓN V2)
         const profileSnap = await getDoc(doc(db, "modelos_profile_v2", id));
+        
         if (profileSnap.exists()) {
           const profileData = profileSnap.data();
           
+          // Mezclar con info V2 si existe (prevalecen los datos guardados en V2 para edad y experiencia)
+          if (profileData.generalInfo) {
+            initialGeneralInfo = {
+              ...initialGeneralInfo,
+              age: profileData.generalInfo.age || initialGeneralInfo.age,
+              experience: profileData.generalInfo.experience || initialGeneralInfo.experience
+            };
+          }
+
           if (profileData.physicalAttributes) setPhysicalAttributes(profileData.physicalAttributes);
           if (profileData.selectedKinks) setSelectedKinks(profileData.selectedKinks);
           if (profileData.selectedToys) setSelectedToys(profileData.selectedToys);
           if (profileData.selectedHashtags) setSelectedHashtags(profileData.selectedHashtags);
           if (profileData.selectedOutfits) {
             setSelectedOutfits(profileData.selectedOutfits);
-            // También cargar outfits personalizados si existen
             if (profileData.customOutfits) setCustomOutfits(profileData.customOutfits);
           }
           
-          // Cargar credenciales si existen
           if (profileData.credentials) {
             setPlatformCredentials(profileData.credentials);
           } else {
-            // Inicializar credenciales para las plataformas sincronizadas si no hay guardadas
             const syncedCredentials: {[key: string]: { apiKey: string, username: string }} = {};
             modelPlatforms.forEach((p: string) => {
               syncedCredentials[p] = { apiKey: "", username: "" };
             });
             setPlatformCredentials(syncedCredentials);
           }
+
+          setApiEnabledPlatforms(profileData.apiEnabledPlatforms || modelPlatforms);
         } else {
-          // Si no hay perfil, inicializar credenciales vacías para las plataformas de la modelo
+          // Si no hay perfil V2, valores por defecto
           const syncedCredentials: {[key: string]: { apiKey: string, username: string }} = {};
           modelPlatforms.forEach((p: string) => {
             syncedCredentials[p] = { apiKey: "", username: "" };
           });
           setPlatformCredentials(syncedCredentials);
           
-          // Limpiar otros campos complementarios
           setPhysicalAttributes({});
           setSelectedKinks([]);
           setSelectedToys([]);
           setSelectedHashtags([]);
           setSelectedOutfits([]);
           setCustomOutfits([]);
+          setApiEnabledPlatforms(modelPlatforms);
         }
       } catch (err) {
         console.error("Error al cargar perfil complementario:", err);
       }
+
+      // Seteo único de generalInfo para evitar renders innecesarios y estados inconsistentes
+      setGeneralInfo(initialGeneralInfo);
 
     } else {
       setSelectedModelId("");
@@ -181,6 +203,7 @@ export default function ModelRegistrationPage() {
       setSelectedHashtags([]);
       setSelectedOutfits([]);
       setCustomOutfits([]);
+      setApiEnabledPlatforms([]);
     }
   };
 
@@ -207,6 +230,7 @@ export default function ModelRegistrationPage() {
         selectedHashtags,
         selectedOutfits,
         customOutfits,
+        apiEnabledPlatforms,
         progress,
         updatedAt: new Date().toISOString()
       };
@@ -239,11 +263,13 @@ export default function ModelRegistrationPage() {
       if (isSelected) {
         const { [platform]: removed, ...rest } = platformCredentials;
         setPlatformCredentials(rest);
+        setApiEnabledPlatforms(prevApi => prevApi.filter(p => p !== platform));
       } else {
         setPlatformCredentials(prevCreds => ({
           ...prevCreds,
           [platform]: { apiKey: "", username: "" }
         }));
+        setApiEnabledPlatforms(prevApi => [...prevApi, platform]); // Enable API by default when platform is added
       }
 
       return {
@@ -638,56 +664,81 @@ export default function ModelRegistrationPage() {
                   <h5 className="text-sm font-black uppercase tracking-widest text-white">Configuración de integración API</h5>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {generalInfo.targetPlatforms.map((platform) => (
-                    <div key={platform} className="bg-primary/5 border border-primary/20 rounded-2xl p-6 space-y-4">
-                      <div className="flex items-center justify-between border-b border-primary/10 pb-3">
-                        <span className="font-bold text-primary">{platform}</span>
-                        <span className="text-[10px] font-black bg-primary/20 text-primary px-2 py-0.5 rounded-full uppercase tracking-tighter">Live Integration</span>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">Usuario / ID de cuenta</label>
-                          <input 
-                            type="text" 
-                            value={platformCredentials[platform]?.username || ""}
-                            onChange={(e) => handleCredentialChange(platform, 'username', e.target.value)}
-                            placeholder={`Usuario en ${platform}`}
-                            className="w-full bg-background-dark/50 border border-primary/10 rounded-lg px-3 py-2 text-xs text-white focus:border-primary outline-none transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">API Key / Token</label>
-                          <div className="relative">
-                            <input 
-                              type="password" 
-                              value={platformCredentials[platform]?.apiKey || ""}
-                              onChange={(e) => handleCredentialChange(platform, 'apiKey', e.target.value)}
-                              placeholder="sk-xxxxxxxxxxxxxxxx"
-                              className="w-full bg-background-dark/50 border border-primary/10 rounded-lg px-3 py-2 text-xs text-white focus:border-primary outline-none transition-all pr-10"
-                            />
-                            <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 text-[16px]">vpn_key</span>
+                  {generalInfo.targetPlatforms.map((platform) => {
+                    const isApiEnabled = apiEnabledPlatforms.includes(platform);
+                    return (
+                      <div key={platform} className={`p-5 rounded-2xl border transition-all ${
+                        isApiEnabled 
+                          ? "bg-slate-900/40 border-primary/30 shadow-lg shadow-primary/5" 
+                          : "bg-slate-900/10 border-slate-800 opacity-60 grayscale"
+                      }`}>
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <span className="material-symbols-outlined text-primary text-xl">
+                              {platform.toLowerCase() === 'chaturbate' ? 'videocam' : 'stars'}
+                            </span>
+                            <h6 className="font-bold text-white tracking-wide">{platform}</h6>
                           </div>
+                          
+                          <label className="flex items-center gap-2 cursor-pointer group">
+                            <input 
+                              type="checkbox" 
+                              className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
+                              checked={isApiEnabled}
+                              onChange={() => {
+                                setApiEnabledPlatforms(prev => 
+                                  prev.includes(platform) 
+                                    ? prev.filter(p => p !== platform) 
+                                    : [...prev, platform]
+                                );
+                              }}
+                            />
+                            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-primary transition-colors">
+                              Usar API
+                            </span>
+                          </label>
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 uppercase">API Secret (Opcional)</label>
-                          <input 
-                            type="password" 
-                            value={platformCredentials[platform]?.apiSecret || ""}
-                            onChange={(e) => handleCredentialChange(platform, 'apiSecret', e.target.value)}
-                            className="w-full bg-background-dark/50 border border-primary/10 rounded-lg px-3 py-2 text-xs text-white focus:border-primary outline-none transition-all"
-                          />
-                        </div>
+                        
+                        {isApiEnabled ? (
+                          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Usuario / ID</label>
+                              <input 
+                                type="text"
+                                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary ring-offset-0 outline-none transition-all"
+                                placeholder={`Usuario en ${platform}`}
+                                value={platformCredentials[platform]?.username || ""}
+                                onChange={(e) => setPlatformCredentials(prev => ({
+                                  ...prev,
+                                  [platform]: { ...prev[platform], username: e.target.value }
+                                }))}
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Clave API</label>
+                              <div className="relative">
+                                <input 
+                                  type="password"
+                                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary ring-offset-0 outline-none transition-all pr-10"
+                                  placeholder="••••••••••••••••"
+                                  value={platformCredentials[platform]?.apiKey || ""}
+                                  onChange={(e) => setPlatformCredentials(prev => ({
+                                    ...prev,
+                                    [platform]: { ...prev[platform], apiKey: e.target.value }
+                                  }))}
+                                />
+                                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 text-sm">key</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-24 flex items-center justify-center border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
+                            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Integración desactivada</p>
+                          </div>
+                        )}
                       </div>
-                      
-                      <div className="pt-2">
-                        <div className="flex items-center gap-1.5 text-[9px] text-slate-500 italic">
-                          <span className="material-symbols-outlined text-[12px] text-amber-500">info</span>
-                          Las credenciales se almacenan en la base de datos del estudio. Solo el equipo administrativo tiene acceso.
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1079,11 +1130,12 @@ export default function ModelRegistrationPage() {
                   physicalAttributes,
                   selectedKinks,
                   selectedToys,
-                  selectedHashtags,
-                  selectedOutfits,
-                  customOutfits,
-                  progress,
-                  updatedAt: new Date().toISOString()
+                   selectedHashtags,
+                   selectedOutfits,
+                   customOutfits,
+                   apiEnabledPlatforms,
+                   progress,
+                   updatedAt: new Date().toISOString()
                 };
 
                 // Guardar en la colección principal con merge para no sobrescribir info accidentalmente

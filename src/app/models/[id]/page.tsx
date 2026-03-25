@@ -13,6 +13,10 @@ interface ModelData {
   category?: string;
   age?: string;
   experience?: string;
+  is_online?: boolean;
+  stream_stats?: {
+    last_sync_status: string;
+  };
 }
 
 export default function ModelProfile() {
@@ -79,14 +83,23 @@ export default function ModelProfile() {
             </div>
           <div className="absolute -bottom-2 right-4 border-4 border-sidebar-dark shadow-xl">
               {(() => {
-                const s = (model.status || "").toLowerCase();
-                const isActive = s === "activa" || s === "active" || s === "activo" || s === "online";
-                const isPending = s === "pendiente" || s === "pending" || s === "en proceso";
+                if (!model.is_online) {
+                    return (
+                        <span className="px-4 py-1.5 text-white text-[10px] font-black rounded-full border-4 border-sidebar-dark bg-slate-500">
+                            OFFLINE
+                        </span>
+                    );
+                }
+                const s = (model.stream_stats?.last_sync_status || "").toLowerCase();
+                const isPublic = s === "public";
+                const isPrivate = s === "private";
+                const isAway = s === "away";
+                
                 return (
                   <span className={`px-4 py-1.5 text-white text-[10px] font-black rounded-full border-4 border-sidebar-dark ${
-                    isActive ? "bg-green-500" : isPending ? "bg-amber-500" : "bg-slate-500"
+                    isPublic ? "bg-green-500" : isPrivate ? "bg-purple-600" : isAway ? "bg-amber-500" : "bg-slate-500"
                   }`}>
-                    {(model.status || "Sin estado").toUpperCase()}
+                    {(model.stream_stats?.last_sync_status || "Online").toUpperCase()}
                   </span>
                 );
               })()}

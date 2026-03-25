@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFilesFromFolder } from '@/lib/google-drive';
+import { getFilesFromFolder, uploadFileToFolder } from '@/lib/google-drive';
 
 export async function GET() {
   try {
@@ -12,20 +12,34 @@ export async function GET() {
       }, { status: 400 });
     }
 
+    // Probar listar archivos
     const files = await getFilesFromFolder(folderId);
     
+    // Probar subida de archivo de prueba
+    const testFileName = `CONEXION_ESTUDIOS_${new Date().getTime()}.json`;
+    const uploadResult = await uploadFileToFolder(folderId, testFileName, {
+      status: "success",
+      message: "Prueba de conexión desde API",
+      timestamp: new Date().toISOString()
+    });
+
     return NextResponse.json({ 
       success: true, 
-      message: "Conexión a Estudios Drive exitosa",
-      count: files.length,
-      files: files.slice(0, 10) // Mostrar solo los primeros 10 por seguridad
+      message: "Conexión y subida a Estudios Drive exitosa",
+      upload: {
+        id: uploadResult.id,
+        name: uploadResult.name
+      },
+      filesCount: files.length,
+      recentFiles: files.slice(0, 5)
     });
   } catch (error: any) {
     console.error("API Test Drive Error:", error);
     return NextResponse.json({ 
       success: false, 
       error: error.message,
-      details: "Revisa que el correo de la cuenta de servicio tenga acceso de EDITOR a la carpeta de Drive."
+      stack: error.stack,
+      details: "Asegúrate de que la cuenta de servicio tenga acceso de EDITOR a la carpeta de Drive."
     }, { status: 500 });
   }
 }

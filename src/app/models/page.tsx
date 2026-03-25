@@ -17,6 +17,8 @@ interface Model {
   progress?: number;
   lastActive?: string;
   nickname?: string;
+  isOnline?: boolean;
+  syncStatus?: string;
 }
 
 export default function ModelsPage() {
@@ -83,10 +85,19 @@ export default function ModelsPage() {
             category: mData.category || "General",
             progress: progress,
             lastActive: mData.lastActive || "Desconocido",
-            nickname: mData.nickname || ""
+            nickname: mData.nickname || "",
+            isOnline: mData.is_online || false,
+            syncStatus: mData.stream_stats?.last_sync_status || "offline"
           };
         });
-        setRealModels(modelList);
+
+        // Filtrar modelos activos (7288e)
+        const activeModels = modelList.filter(m => {
+          const s = (m.status || "").toLowerCase();
+          return s === "active" || s === "activa" || s === "activo" || s === "online";
+        });
+
+        setRealModels(activeModels);
       } catch (error) {
         console.error("Error fetching real models:", error);
       } finally {
@@ -188,16 +199,30 @@ export default function ModelsPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${
-                      (() => {
-                        const s = (model.status || "").toLowerCase();
-                        if (s === "activa" || s === "active" || s === "activo" || s === "online") return "bg-green-500/10 text-green-500";
-                        if (s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "review" || s === "revision") return "bg-amber-500/10 text-amber-500";
-                        return "bg-red-500/10 text-red-500";
-                      })()
-                    }`}>
-                      {model.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`size-2 rounded-full ${
+                        (() => {
+                          if (!model.isOnline) return "bg-slate-500";
+                          const s = (model.syncStatus || "").toLowerCase();
+                          if (s === "public") return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
+                          if (s === "private") return "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]";
+                          if (s === "away") return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]";
+                          return "bg-slate-500";
+                        })()
+                      }`}></span>
+                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${
+                        (() => {
+                          if (!model.isOnline) return "bg-slate-500/10 text-slate-400";
+                          const s = (model.syncStatus || "").toLowerCase();
+                          if (s === "public") return "bg-green-500/10 text-green-500";
+                          if (s === "private") return "bg-purple-500/10 text-purple-600";
+                          if (s === "away") return "bg-amber-500/10 text-amber-500";
+                          return "bg-slate-500/10 text-slate-400";
+                        })()
+                      }`}>
+                        {model.isOnline ? (model.syncStatus || "En línea") : "Offline"}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-1 flex-wrap">

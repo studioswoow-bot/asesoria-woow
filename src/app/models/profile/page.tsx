@@ -33,7 +33,17 @@ function ProfileContent() {
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists()) {
-          setModel(docSnap.data() as ModelData);
+          const data = docSnap.data() as ModelData;
+          // Verificar que la modelo esté activa (7288e)
+          const s = (data.status || "").toLowerCase();
+          const isActive = s === "active" || s === "activa" || s === "activo" || s === "online";
+          
+          if (isActive) {
+            setModel(data);
+          } else {
+            console.warn("La modelo existe pero no está activa en el estudio.");
+            setModel(null);
+          }
         }
       } catch (error) {
         console.error("Error fetching model:", error);

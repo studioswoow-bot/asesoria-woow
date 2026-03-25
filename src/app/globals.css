@@ -17,9 +17,15 @@
   --radius-2xl: 2rem;
 }
 
+/* Permitir que la clase .dark active los estilos 'dark:' en Tailwind v4 */
+@variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
-    @apply bg-background-dark text-slate-100 font-sans min-h-screen;
+    background-color: var(--color-background-dark);
+    color: #f1f5f9; /* slate-100 */
+    font-family: var(--font-sans);
+    min-height: 100vh;
   }
 }
 @layer utilities {

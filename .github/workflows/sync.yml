@@ -1,0 +1,16 @@
+name: Periodic Sync Chaturbate
+
+on:
+  schedule:
+    # Se ejecuta cada 2 minutos (GitHub suele redondear a 5 min, pero configuramos 2)
+    - cron: '*/2 * * * *'
+  workflow_dispatch: # Permite ejecución manual desde GitHub
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Sync API
+        run: |
+          curl -X GET "https://asesoria.estudioswoow.com/api/sync-chaturbate" \
+          -H "x-cron-secret: ${{ secrets.CRON_SECRET }}"

@@ -20,3 +20,5 @@ env:
     value: "621394494383"
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     value: "1:621394494383:web:5b103638a7bcd759e1655a"
+  - variable: CRON_SECRET
+    secret: CRON_SECRET

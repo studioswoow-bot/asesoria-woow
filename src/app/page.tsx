@@ -18,6 +18,8 @@ interface Model {
   progress?: number;
   lastActive?: string;
   nickname?: string;
+  isOnline?: boolean;
+  syncStatus?: string;
 }
 
 export default function Home() {
@@ -62,35 +64,48 @@ export default function Home() {
           
           return {
             id: doc.id,
-            name: mData.name || "Sin nombre",
-            status: mData.status || "Inactiva",
-            nickname: mData.nickname || "",
-            ...mData,
-            progress: Number(progress)
+            name: String(mData.name || "Sin nombre"),
+            status: String(mData.status || "Inactiva"),
+            nickname: String(mData.nickname || ""),
+            category: String(mData.category || "General"),
+            lastActive: (() => {
+              const ts = mData.lastActive || mData.stream_stats?.synced_at || mData.updatedAt;
+              if (!ts) return "Desconocido";
+              if (typeof ts.toDate === 'function') return ts.toDate().toLocaleString();
+              if (ts.seconds) return new Date(ts.seconds * 1000).toLocaleString();
+              return String(ts);
+            })(),
+            progress: Number(progress),
+            isOnline: !!mData.is_online,
+            syncStatus: mData.stream_stats?.last_sync_status || "offline"
           };
         }) as Model[];
 
-        setModels(modelList);
-        
-        // Calcular métricas
-        const total = modelList.length;
-        const active = modelList.filter(m => {
+        // Filtrar solo las modelos activas en el estudio (7288e)
+        const studioModels = modelList.filter(m => {
           const s = (m.status || "").toLowerCase();
-          // Solo contamos como activas las que tienen estado activo Y perfil al 100%?
-          // El usuario pidió que las de <100% se sumen a "en proceso".
-          return (s === "activa" || s === "active" || s === "activo" || s === "online") && (m.progress === 100);
+          return s === "active" || s === "activa" || s === "activo" || s === "online";
+        });
+
+        setModels(studioModels);
+        
+        // Calcular métricas basadas solo en modelos que continúan en el estudio
+        const total = studioModels.length;
+        const activeCount = studioModels.filter(m => {
+          // Solo contamos como "completamente activas" las que tienen perfil al 100%
+          return m.progress === 100;
         }).length;
 
-        const pending = modelList.filter(m => {
+        const pending = studioModels.filter(m => {
           const s = (m.status || "").toLowerCase();
-          const isPendingStatus = s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "review" || s === "revision";
+          const isPendingStatus = s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "revision";
           const isProfileIncomplete = (m.progress || 0) < 100;
           return isPendingStatus || isProfileIncomplete;
         }).length;
         
         setMetrics({
           total,
-          active,
+          active: activeCount,
           inProcess: pending,
           revenue: "$45,200" // Mocking revenue as it's not in the models collection
         });

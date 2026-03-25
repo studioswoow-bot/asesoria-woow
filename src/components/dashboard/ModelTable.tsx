@@ -13,6 +13,8 @@ interface Model {
   progress?: number;
   lastActive?: string;
   nickname?: string;
+  isOnline?: boolean;
+  syncStatus?: string;
 }
 
 interface ModelTableProps {
@@ -21,20 +23,6 @@ interface ModelTableProps {
 }
 
 export default function ModelTable({ models, loading }: ModelTableProps) {
-  const getStatusStyles = (status: string) => {
-    const s = (status || "").toLowerCase();
-    if (s === "activa" || s === "active" || s === "activo" || s === "online") return "bg-green-500/10 text-green-500 border-green-500/20";
-    if (s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "review" || s === "revision") return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-    return "bg-slate-500/10 text-slate-500 border-slate-500/20";
-  };
-
-  const getStatusDot = (status: string) => {
-    const s = (status || "").toLowerCase();
-    if (s === "activa" || s === "active" || s === "activo" || s === "online") return "bg-green-500";
-    if (s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "review" || s === "revision") return "bg-amber-500";
-    return "bg-slate-500";
-  };
-
   if (loading) {
     return (
       <div className="bg-sidebar-dark/50 rounded-2xl border border-primary/20 overflow-hidden">
@@ -78,9 +66,27 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                   </div>
                 </td>
                 <td className="py-4 px-6">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${getStatusStyles(String(model.status))}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${getStatusDot(String(model.status))}`}></span>
-                    {String(model.status || "Sin estado")}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border animate-in fade-in duration-500 ${
+                    (() => {
+                      if (!model.isOnline) return "bg-slate-500/10 text-slate-500 border-slate-500/20";
+                      const s = (model.syncStatus || "").toLowerCase();
+                      if (s === "public") return "bg-green-500/10 text-green-500 border-green-500/20";
+                      if (s === "private") return "bg-purple-500/10 text-purple-500 border-purple-500/20";
+                      if (s === "away") return "bg-amber-500/10 text-amber-500 border-amber-500/20";
+                      return "bg-slate-500/10 text-slate-500 border-slate-500/20";
+                    })()
+                  }`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${
+                      (() => {
+                        if (!model.isOnline) return "bg-slate-500";
+                        const s = (model.syncStatus || "").toLowerCase();
+                        if (s === "public") return "bg-green-500 animate-pulse";
+                        if (s === "private") return "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]";
+                        if (s === "away") return "bg-amber-500";
+                        return "bg-slate-500";
+                      })()
+                    }`}></span>
+                    {model.isOnline ? (model.syncStatus || "Online") : "Offline"}
                   </span>
                 </td>
                 <td className="py-4 px-6">

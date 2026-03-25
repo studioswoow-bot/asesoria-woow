@@ -1,21 +1,22 @@
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-
-/**
- * Saves a historical snapshot of a model's profile.
- * Respects isolation by saving to "modelos_profile_history_v2".
- */
 export async function saveProfileHistory(modelId: string, profileData: any) {
   try {
-    const historyRef = collection(db, "modelos_profile_history_v2");
-    await addDoc(historyRef, {
-      modelId,
-      ...profileData,
-      snapshotDate: new Date().toISOString(),
-      timestamp: serverTimestamp()
+    // Intentamos obtener el token si está en el contexto o localStorage (depende de tu auth)
+    // Para simplificar, la API maneja la escritura si el endpoint es alcanzable.
+    const response = await fetch('/api/history/archive', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ modelId, profileData }),
     });
-    console.log(`✅ Snapshot histórico guardado para ${modelId}`);
+
+    if (!response.ok) {
+      throw new Error(`Fallo al archivar en servidor: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log(`✅ Histórico archivado con éxito:`, result);
   } catch (error) {
-    console.error("❌ Error al guardar histórico de perfil:", error);
+    console.error("❌ Error al guardar histórico de perfil (Drive/Firestore):", error);
   }
 }

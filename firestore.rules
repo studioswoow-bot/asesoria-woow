@@ -17,26 +17,42 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // COLECCIONES COMPARTIDAS / CONECTADAS
+    // COLECCIONES ORIGINALES (SÓLO LECTURA)
+    // Respetando SEGURIDAD_Y_AISLAMIENTO.md
     // ==========================================
     
     match /models/{modelId} {
       allow read: if true; 
-      allow write: if true; // ⚠️ Temporalmente abierto para permitir la sincronización automatizada de Chaturbate
+      allow write: if isStaff(); 
     }
 
     match /daily_metrics/{metricId} {
       allow read: if true;
-      allow write: if true; // ⚠️ Permitir registro automático de tokens desde API
-      allow delete: if isAdmin();
+      allow write: if isStaff();
     }
 
-    match /chaturbate_logs/{logId} {
-      allow read, write: if true; // Auditoría de sincronización
+    match /users/{userId} {
+      allow list: if request.auth != null
+                  && request.query.limit <= 1 
+                  && request.query.filters.size() == 1
+                  && request.query.filters[0].op == '==' 
+                  && request.query.filters[0].field == 'username';
+      allow read: if request.auth != null;
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    match /work_hours/{hourId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+    
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
     }
 
     // ==========================================
-    // NUEVAS COLECCIONES (App Registro & Analytics)
+    // NUEVAS COLECCIONES (App Registro & Analytics V2)
     // ==========================================
     
     match /modelos_action_plans_v2/{planId} {
@@ -55,34 +71,41 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // ==========================================
-    // COLECCIONES PRIVADAS (App Original)
-    // ==========================================
-    
-    match /users/{userId} {
-      // FIX: Añadida verificación de autenticación al list para evitar enumeración de emails
-      allow list: if request.auth != null
-                  && request.query.limit <= 1 
-                  && request.query.filters.size() == 1
-                  && request.query.filters[0].op == '==' 
-                  && request.query.filters[0].field == 'username';
-      allow read: if request.auth != null;
-      allow write: if isAdmin() || request.auth.uid == userId;
+    match /chaturbate_logs/{logId} {
+      allow read, write: if true;
     }
 
-    match /work_hours/{hourId} {
-      allow read: if true;
-      allow write: if true;
-      allow delete: if isAdmin() || isStaff();
-    }
+    // ==========================================
+    // OTRAS COLECCIONES DEL SERVIDOR (Preservar)
+    // ==========================================
     
-    match /transactions/{transactionId} {
+    match /savings_transactions/{txId} {
       allow read: if request.auth != null;
       allow write: if isStaff();
     }
 
+    match /financial_transactions/{id} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    match /financial_budgets/{id} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    match /studio/{documentId} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    match /rooms/{roomId} {
+      allow read: if request.auth != null;
+      allow write: if isStaff();
+    }
+
+    // Bloqueo por defecto para cualquier otra cosa
     match /{document=**} {
-      // Bloqueo por defecto para rutas protegidas si no hay auth
       allow read: if request.auth != null;
       allow write: if false;
     }

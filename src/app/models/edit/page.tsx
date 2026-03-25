@@ -76,6 +76,16 @@ function EditProfileContent() {
         const modelSnap = await getDoc(modelRef);
         if (modelSnap.exists()) {
           const data = modelSnap.data();
+          // Verificar que la modelo esté activa (7288e)
+          const s = (data.status || "").toLowerCase();
+          const isActive = s === "active" || s === "activa" || s === "activo" || s === "online";
+          
+          if (!isActive) {
+            console.warn("La modelo no está activa.");
+            setLoading(false);
+            return;
+          }
+
           setGeneralInfo(prev => ({
             ...prev,
             artisticName: data.name || "",
@@ -84,6 +94,9 @@ function EditProfileContent() {
             age: data.age || "",
             targetPlatforms: data.platforms || []
           }));
+        } else {
+          setLoading(false);
+          return;
         }
 
         const profileRef = doc(db, "modelos_profile_v2", id);
