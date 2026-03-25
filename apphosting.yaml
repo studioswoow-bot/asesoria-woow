@@ -6,10 +6,6 @@ version: "v1"
 env:
   - variable: FIREBASE_PROJECT_ID
     value: "estudioswoow-7288e"
-  - variable: FIREBASE_CLIENT_EMAIL
-    secret: FIREBASE_CLIENT_EMAIL
-  - variable: FIREBASE_PRIVATE_KEY
-    secret: FIREBASE_PRIVATE_KEY
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
     value: "AIzaSyAdIcsycSKE2I-pMwB79DdWlp_x_8hdxbc"
   - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN

@@ -275,7 +275,20 @@ export async function GET(req: Request) {
 
   const authHeader = req.headers.get("Authorization");
   const cronSecretHeader = req.headers.get("x-cron-secret");
-  const serverSecret = process.env.CRON_SECRET;
+  
+  let serverSecret = process.env.CRON_SECRET;
+
+  // Fallback a Firestore si no está en el environment (para evitar dramas de consola)
+  if (!serverSecret && adminDb) {
+    try {
+      const configDoc = await adminDb.collection("config").doc("sync").get();
+      if (configDoc.exists) {
+        serverSecret = configDoc.data()?.cron_secret;
+      }
+    } catch (e) {
+      console.error("[Sync] Error recuperando secret de Firestore:", e);
+    }
+  }
 
   let isAuthorized = false;
 
