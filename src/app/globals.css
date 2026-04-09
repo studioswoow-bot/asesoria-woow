@@ -26,6 +26,10 @@
   --text-main: #0f172a;
   --text-muted: #64748b;
   --border-subtle: rgba(15, 23, 42, 0.05);
+  /* Select/Input en modo claro */
+  --input-bg: #f1f5f9;
+  --input-text: #0f172a;
+  --input-border: rgba(15, 23, 42, 0.15);
 }
 
 .dark {
@@ -35,6 +39,10 @@
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --border-subtle: rgba(255, 255, 255, 0.05);
+  /* Select/Input en modo oscuro */
+  --input-bg: #1e1218;
+  --input-text: #f1f5f9;
+  --input-border: rgba(255, 255, 255, 0.1);
 }
 
 /* Permitir que la clase .dark active los estilos 'dark:' en Tailwind v4 */
@@ -48,7 +56,40 @@
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
+
+  /* ===== FIX GLOBAL: Select/Option/Input en ambos modos ===== */
+  select {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+    border-color: var(--input-border);
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Las opciones dentro del dropdown nativo del navegador */
+  select option {
+    background-color: var(--input-bg) !important;
+    color: var(--input-text) !important;
+  }
+
+  /* Inputs de texto también */
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="email"],
+  input[type="password"],
+  textarea {
+    color: var(--input-text);
+    background-color: transparent;
+  }
+
+  /* Placeholder consistente */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+    opacity: 0.7;
+  }
 }
+
 @layer utilities {
   @keyframes loading-bar {
     0% { transform: translateX(-100%); }
