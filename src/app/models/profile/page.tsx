@@ -337,10 +337,8 @@ function ProfileContent() {
                      </Link>
                  </div>
               </div>
-         </div> </div>
-             </div>
-        </div>
-      </div>
+          </div>
+       </div>
     </div>
   );
 }

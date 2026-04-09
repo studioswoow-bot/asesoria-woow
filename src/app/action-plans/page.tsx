@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { useActionPlans, ActionPlan, DailyTracking } from "@/context/ActionPlanContext";
+import { useActionPlans, ActionPlan, DailyTracking, HistoryEntry } from "@/context/ActionPlanContext";
 import { db } from "@/lib/firebase";
 import { collection, query, getDocs, where, limit, orderBy } from "firebase/firestore";
 import LoadingScreen from "@/components/common/LoadingScreen";

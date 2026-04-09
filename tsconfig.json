@@ -36,6 +36,11 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "scripts",
+    "test-alia.ts",
+    "tmp.mjs",
+    "debug_*.js",
+    "*.test.ts"
   ]
 }

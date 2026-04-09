@@ -3,6 +3,9 @@ import { adminDb } from "@/lib/firebase-admin";
 
 export async function GET(req: Request) {
   try {
+    if (!adminDb) {
+      return NextResponse.json({ error: "Firebase Admin not initialized" }, { status: 500 });
+    }
     const { searchParams } = new URL(req.url);
     const id = searchParams.get("id") || "silacitex_effys";
     let modelId = id;

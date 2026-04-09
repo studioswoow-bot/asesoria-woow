@@ -3,6 +3,9 @@ import { adminDb } from "@/lib/firebase-admin";
 
 export async function GET() {
   try {
+    if (!adminDb) {
+      return NextResponse.json({ error: "Firebase Admin not initialized" }, { status: 500 });
+    }
     const list = await adminDb.listCollections();
     const names = list.map(c => c.id);
     
