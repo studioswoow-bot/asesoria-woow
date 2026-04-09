@@ -4,6 +4,7 @@ version: "v1"
 
 # Variables de entorno para el backend (Next.js SSR / API Routes)
 env:
+  # Firebase públicas
   - variable: FIREBASE_PROJECT_ID
     value: "estudioswoow-7288e"
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
@@ -16,5 +17,21 @@ env:
     value: "621394494383"
   - variable: NEXT_PUBLIC_FIREBASE_APP_ID
     value: "1:621394494383:web:5b103638a7bcd759e1655a"
+
+  # Google Drive API - ID de carpeta raíz (no es sensible)
+  - variable: GOOGLE_DRIVE_PROJECT_ID
+    value: "gmail-woow-estudios-wordpress"
+  - variable: GOOGLE_DRIVE_ROOT_FOLDER_ID
+    value: "1O1A17vQPT5ci5hijKebXLKz-3Ohs_XoB"
+  - variable: GOOGLE_DRIVE_CLIENT_EMAIL
+    value: "estudios-woow-integration-api@gmail-woow-estudios-wordpress.iam.gserviceaccount.com"
+
+  # Secretos (claves privadas — se configuran en Firebase Secret Manager)
+  - variable: GOOGLE_DRIVE_PRIVATE_KEY
+    secret: GOOGLE_DRIVE_PRIVATE_KEY
+  - variable: FIREBASE_CLIENT_EMAIL
+    value: "firebase-adminsdk-fbsvc@estudioswoow-7288e.iam.gserviceaccount.com"
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
   - variable: CRON_SECRET
     secret: CRON_SECRET
