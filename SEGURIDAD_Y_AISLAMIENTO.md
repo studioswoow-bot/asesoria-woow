@@ -18,15 +18,24 @@ Todas las funcionalidades de esta nueva aplicación deben persistirse en colecci
 - `modelos_profile_v2` (Atributos, sexionario, hashtags)
 - `modelos_api_integrations` (Credenciales de APIs de plataformas)
 - `modelos_action_plans_v2` (Planes de acción y seguimiento avanzado)
+- `modelos_analytics_cache_v2` (Caché procesado para generación de estrategias: Máximo 1 año de histórico móvil).
 
-## 2. Reglas de Despliegue (Hosting)
+## 2. Política de Retención y Uso de IA en Analytics
+
+Para garantizar que los modelos de inteligencia artificial (ej. Gemini, Antigravity) puedan generar planes de acción precisos basados en el comportamiento histórico (horas fuertes, seguidores, top usuarios, debilidades), y al mismo tiempo mantener un control estricto, se implementará la siguiente política:
+
+- **Retención Perpetua en Aplicación Principal:** Las bases de datos y tablas de la aplicación `estudioswoow-7288e` (como `daily_metrics`, `work_hours`, etc.) mantendrán un guardado histórico perpetuo sin expiración. Estos datos nunca deben borrarse, garantizando que se pueda consultar la evolución del estudio a lo largo de los años (ej. consultar 2026 en el año 2040).
+- **Almacenamiento Warm (Caché Exclusiva de Asesoría):** Exclusivamente en la nueva colección `modelos_analytics_cache_v2` (perteneciente a esta aplicación de Asesoría) se mantendrá un histórico local ya procesado de **máximo 1 año (365 días)**.
+- **Auto-sobreescritura Local:** Esta caché de Asesoría se debe ir auto-escribiendo/sobrescribiendo de manera móvil (rolling window) para no superar el límite de 1 año, manteniendo las tablas optimizadas y listas para lectura de la IA, sin afectar en lo absoluto el historial perpetuo de la aplicación principal.
+
+## 3. Reglas de Despliegue (Hosting)
 
 ### Multi-site Independiente
 - El despliegue de esta aplicación **nunca** debe realizarse sobre el sitio principal de Hosting.
 - Se debe utilizar el target `registro-modelos` configurado en `.firebaserc`.
 - Comando de despliegue oficial: `firebase deploy --only hosting:registro-modelos`.
 
-## 3. Seguridad a Nivel de Servidor (Rules)
+## 4. Seguridad a Nivel de Servidor (Rules)
 
 Se deben mantener las reglas de seguridad en `firestore.rules` que bloquean explícitamente el acceso de escritura de esta aplicación a las colecciones antiguas, sirviendo como un "firewall" técnico adicional.
 

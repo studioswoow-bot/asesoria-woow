@@ -1,0 +1,57 @@
+[
+  {
+    "date": "2026-01-01",
+    "model_id": "Cp7PG3HWhQzRPFcbh7Xk",
+    "model_name": "Leidy Tatiana Villegas Vanegas",
+    "hours": 3.65,
+    "minutes": 39,
+    "created_at": {
+      "_seconds": 1771446992,
+      "_nanoseconds": 72000000
+    }
+  },
+  {
+    "date": "2026-01-01",
+    "model_id": "S9qNvSnaBtQwD2Y9tuSP",
+    "model_name": "Jhoan Manuel Marin Mora",
+    "hours": 1.45,
+    "minutes": 27,
+    "created_at": {
+      "_seconds": 1771446977,
+      "_nanoseconds": 294000000
+    }
+  },
+  {
+    "date": "2026-01-02",
+    "model_id": "Cp7PG3HWhQzRPFcbh7Xk",
+    "model_name": "Leidy Tatiana Villegas Vanegas",
+    "hours": 7.3,
+    "minutes": 18,
+    "created_at": {
+      "_seconds": 1771446992,
+      "_nanoseconds": 283000000
+    }
+  },
+  {
+    "date": "2026-01-02",
+    "model_id": "DeiTLV7w6nCoP0ZmoDRU",
+    "model_name": "Diana Marcela Castañeda Useche",
+    "hours": 0.7,
+    "minutes": 42,
+    "created_at": {
+      "_seconds": 1771446986,
+      "_nanoseconds": 777000000
+    }
+  },
+  {
+    "date": "2026-01-02",
+    "model_id": "S9qNvSnaBtQwD2Y9tuSP",
+    "model_name": "Jhoan Manuel Marin Mora",
+    "hours": 6.2,
+    "minutes": 12,
+    "created_at": {
+      "_seconds": 1771446977,
+      "_nanoseconds": 513000000
+    }
+  }
+]

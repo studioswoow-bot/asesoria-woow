@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { findOrCreateFolder, uploadFileToFolder } from '@/lib/google-drive';
+import { adminDb } from '@/lib/firebase-admin';
 
 export async function POST(req: Request) {
   try {
@@ -18,32 +19,54 @@ export async function POST(req: Request) {
     sanitizedData.source = "manual_registration";
     sanitizedData.modelId = modelId;
 
-    // 2. Archivar en Google Drive (Almacenamiento Único)
+    // 2. Archivar en Google Drive (Prioridad 1)
+    let driveSaved = false;
+    let driveErrorMsg = "";
     const rootFolderId = process.env.GOOGLE_DRIVE_ROOT_FOLDER_ID;
-    const artisticName = sanitizedData.generalInfo?.artisticName;
+    const artisticName = sanitizedData.generalInfo?.artisticName || modelId;
 
-    if (rootFolderId && artisticName) {
+    if (rootFolderId) {
       try {
         const historyBaseFolderId = await findOrCreateFolder("Historicos_Perfiles", rootFolderId);
-        const nickname = (artisticName || modelId).replace(/[^a-z0-9]/gi, '_');
+        const nickname = String(artisticName).replace(/[^a-z0-9]/gi, '_');
         const modelFolderId = await findOrCreateFolder(nickname, historyBaseFolderId as string);
         
         const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
         const fileName = `profile_${nickname}_${timestamp}.json`;
         
         await uploadFileToFolder(modelFolderId as string, fileName, sanitizedData);
-          console.log(`✅ Histórico en Drive: ${fileName}`);
-      } catch (driveError) {
-        console.error("❌ Error CRÍTICO al guardar en Drive:", driveError);
-        throw new Error("No se pudo guardar el histórico en Google Drive");
+        console.log(`✅ Histórico en Drive: ${fileName}`);
+        driveSaved = true;
+      } catch (driveError: any) {
+        console.error("⚠️ Error al guardar en Drive (intentando fallback):", driveError.message);
+        driveErrorMsg = driveError.message;
       }
-    } else {
-        throw new Error("No hay carpeta raíz de Drive configurada o falta el nombre artístico");
+    }
+
+    // 3. Fallback/Espejo en Firestore (Colección 'profile_history_snapshots')
+    let firestoreSaved = false;
+    if (adminDb) {
+      try {
+        await adminDb.collection('profile_history_snapshots').add({
+          ...sanitizedData,
+          archivedAt: new Date().toISOString()
+        });
+        console.log(`✅ Snaphot guardado en Firestore para modelo: ${modelId}`);
+        firestoreSaved = true;
+      } catch (fsError: any) {
+        console.error("❌ Error al guardar backup en Firestore:", fsError.message);
+      }
+    }
+
+    if (!driveSaved && !firestoreSaved) {
+        throw new Error(`No se pudo archivar en ningún destino. Error Drive: ${driveErrorMsg}`);
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: "Histórico archivado correctamente en Google Drive." 
+      drive: driveSaved,
+      firestore: firestoreSaved,
+      message: driveSaved ? "Histórico archivado en Google Drive." : "Archivado en Firestore (Drive falló)."
     });
 
   } catch (error: any) {

@@ -110,7 +110,7 @@ export default function ModelProfile() {
             <div>
                 <span className="text-[10px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full uppercase tracking-widest mb-3 inline-block">PERFIL VERIFICADO</span>
                 <h1 className="text-5xl font-black text-white leading-tight">
-                    {model.name}
+                    {model.name} ({model.nickname || "sin_apodo"})
                 </h1>
                 <p className="text-slate-400 text-xl font-medium mt-1 italic">
                     @{model.nickname || "sin_apodo"}

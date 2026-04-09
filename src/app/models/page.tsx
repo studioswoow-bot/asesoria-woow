@@ -27,34 +27,7 @@ export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [syncing, setSyncing] = useState(false);
 
-  async function handleSyncChaturbate() {
-    if (!user) {
-      alert("Debes estar autenticado para sincronizar.");
-      return;
-    }
-    setSyncing(true);
-    try {
-      // FIX #6: Enviar token de autenticación al endpoint protegido
-      const token = await user.getIdToken();
-      const response = await fetch('/api/sync-chaturbate', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert("Sincronización con Chaturbate exitosa: " + data.message);
-        window.location.reload();
-      } else {
-        alert("Error en sincronización: " + (data.error || "Desconocido"));
-      }
-    } catch (error: any) {
-      console.error("Sync error:", error);
-      alert("Error de conexión al sincronizar: " + error.message);
-    } finally {
-      setSyncing(false);
-    }
-  }
 
   useEffect(() => {
     async function fetchRealModels() {
@@ -91,13 +64,18 @@ export default function ModelsPage() {
           };
         });
 
-        // Filtrar modelos activos (7288e)
-        const activeModels = modelList.filter(m => {
-          const s = (m.status || "").toLowerCase();
-          return s === "active" || s === "activa" || s === "activo" || s === "online";
+        // Mostramos todos los modelos pero ordenados por relevancia (activos primero)
+        const sortedModels = modelList.sort((a, b) => {
+          const statusA = (a.status || "").toLowerCase();
+          const statusB = (b.status || "").toLowerCase();
+          const isActiveA = ["active", "activa", "activo", "online"].includes(statusA);
+          const isActiveB = ["active", "activa", "activo", "online"].includes(statusB);
+          if (isActiveA && !isActiveB) return -1;
+          if (!isActiveA && isActiveB) return 1;
+          return 0;
         });
 
-        setRealModels(activeModels);
+        setRealModels(sortedModels);
       } catch (error) {
         console.error("Error fetching real models:", error);
       } finally {
@@ -120,47 +98,35 @@ export default function ModelsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-3xl font-display font-bold text-white mb-2">Catálogo de Modelos</h2>
-          <p className="text-slate-400">Datos sincronizados en tiempo real con la base de datos central de Estudios WooW.</p>
+          <h2 className="text-3xl font-display font-bold text-text-main mb-2">Catálogo de Modelos</h2>
+          <p className="text-text-muted">Datos sincronizados en tiempo real con la base de datos central de Estudios WooW.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button 
-            onClick={handleSyncChaturbate}
-            disabled={syncing}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold font-sans transition-all shadow-lg ${
-              syncing ? 'bg-slate-700 text-slate-400 cursor-not-allowed' : 'bg-accent-gold hover:bg-accent-light text-background-dark shadow-accent-gold/20'
-            }`}
-          >
-            <span className={`material-symbols-outlined text-[20px] ${syncing ? 'animate-spin' : ''}`}>
-              {syncing ? 'sync' : 'bolt'}
-            </span>
-            <span>{syncing ? 'Sincronizando...' : 'Sincronizar Chaturbate'}</span>
-          </button>
           <Link 
             href="/models/register"
             className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-primary/20 transition-all font-sans"
           >
-            <span className="material-symbols-outlined text-[20px]">person_add</span>
-            <span>Registrar modelo</span>
+            <span className="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+            <span>Perfilamiento</span>
           </Link>
         </div>
       </div>
 
-      <div className="bg-sidebar-dark/50 rounded-2xl border border-primary/20 overflow-hidden">
-        <div className="p-6 border-b border-primary/10 flex items-center justify-between bg-sidebar-dark/30">
+      <div className="bg-panel-dark rounded-2xl border border-text-main/10 overflow-hidden shadow-xl">
+        <div className="p-6 border-b border-text-main/10 flex items-center justify-between bg-text-main/5">
           <div className="flex items-center gap-4">
             <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-sm">search</span>
               <input 
                 type="text" 
                 placeholder="Buscar modelos por nombre o apodo..." 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-background-dark border border-primary/20 rounded-lg pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary w-64 transition-all"
+                className="bg-text-main/5 border border-text-main/10 rounded-lg pl-10 pr-4 py-2 text-sm text-text-main focus:outline-none focus:ring-1 focus:ring-primary w-64 transition-all"
               />
             </div>
           </div>
-          <div className="flex gap-2 text-xs text-slate-500 items-center">
+          <div className="flex gap-2 text-xs text-text-muted items-center">
             <span className="flex items-center gap-1">
               <span className="size-2 rounded-full bg-green-500 animate-pulse"></span>
               Conexión Segura (Solo Lectura)
@@ -169,59 +135,41 @@ export default function ModelsPage() {
         </div>
 
         {loading ? (
-          <div className="bg-sidebar-dark/30">
+          <div className="bg-panel-dark">
             <LoadingScreen message="Recuperando catálogo desde Firebase..." />
           </div>
         ) : (
           <table className="w-full">
             <thead>
-              <tr className="text-left text-[10px] uppercase tracking-widest text-slate-500 border-b border-primary/10">
+              <tr className="text-left text-[10px] uppercase tracking-widest text-text-muted border-b border-text-main/10">
                 <th className="px-6 py-4 font-black">Nombre de la modelo</th>
-                <th className="px-6 py-4 font-black">Estado</th>
                 <th className="px-6 py-4 font-black">Plataformas</th>
                 <th className="px-6 py-4 font-black">Categoría</th>
                 <th className="px-6 py-4 font-black">Progreso Perfil</th>
                 <th className="px-6 py-4 font-black">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-primary/5">
+            <tbody className="divide-y divide-text-main/5">
               {filteredModels.map((model) => (
-                <tr key={model.id} className="hover:bg-primary/5 transition-colors group">
+                <tr key={model.id} className="hover:bg-text-main/5 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold overflow-hidden uppercase">
                         {model.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
                       </div>
-                      <div>
-                        <div className="text-sm font-bold text-white group-hover:text-primary transition-colors">{model.name}</div>
-                        <div className="text-[10px] text-slate-500">@{model.nickname || "sin_apodo"}</div>
+                    <div className="flex flex-col">
+                      <div className="text-sm font-bold text-text-main group-hover:text-primary transition-colors flex items-center gap-2">
+                        {model.name} ({model.nickname || "sin_apodo"})
+                        <span className={`text-[8px] px-1.5 py-0.5 rounded-md font-black uppercase ${
+                          ["active", "activa", "activo", "online"].includes((model.status || "").toLowerCase()) 
+                          ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20" 
+                          : "bg-red-500/10 text-red-500 border border-red-500/20"
+                        }`}>
+                          {model.status}
+                        </span>
                       </div>
+                      <div className="text-[10px] text-text-muted">@{model.nickname || "sin_apodo"}</div>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <span className={`size-2 rounded-full ${
-                        (() => {
-                          if (!model.isOnline) return "bg-slate-500";
-                          const s = (model.syncStatus || "").toLowerCase();
-                          if (s === "public") return "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]";
-                          if (s === "private") return "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)]";
-                          if (s === "away") return "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]";
-                          return "bg-slate-500";
-                        })()
-                      }`}></span>
-                      <span className={`text-[10px] font-black uppercase px-2 py-1 rounded-md ${
-                        (() => {
-                          if (!model.isOnline) return "bg-slate-500/10 text-slate-400";
-                          const s = (model.syncStatus || "").toLowerCase();
-                          if (s === "public") return "bg-green-500/10 text-green-500";
-                          if (s === "private") return "bg-purple-500/10 text-purple-600";
-                          if (s === "away") return "bg-amber-500/10 text-amber-500";
-                          return "bg-slate-500/10 text-slate-400";
-                        })()
-                      }`}>
-                        {model.isOnline ? (model.syncStatus || "En línea") : "Offline"}
-                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
@@ -233,8 +181,8 @@ export default function ModelsPage() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-xs text-slate-300">{model.category}</td>
-                  <td className="px-6 py-4 text-xs text-slate-300">
+                  <td className="px-6 py-4 text-xs text-text-muted">{model.category}</td>
+                  <td className="px-6 py-4 text-xs text-text-muted">
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-1.5 bg-background-dark rounded-full overflow-hidden">
                         <div className="h-full bg-primary" style={{ width: `${model.progress || 0}%` }}></div>
@@ -244,13 +192,13 @@ export default function ModelsPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
-                      <Link href={`/models/analytics?id=${model.id}`} className="p-2 hover:bg-accent-gold/20 rounded-lg text-slate-400 hover:text-accent-gold transition-all" title="Análisis en tiempo real">
+                      <Link href={`/models/analytics?id=${model.id}`} className="p-2 hover:bg-accent-gold/20 rounded-lg text-text-muted hover:text-accent-gold transition-all" title="Análisis en tiempo real">
                         <span className="material-symbols-outlined text-sm">monitoring</span>
                       </Link>
-                      <Link href={`/models/profile?id=${model.id}`} className="p-2 hover:bg-primary/20 rounded-lg text-slate-400 hover:text-primary transition-all" title="Ver Perfil Premium">
+                      <Link href={`/models/profile?id=${model.id}`} className="p-2 hover:bg-primary/20 rounded-lg text-text-muted hover:text-primary transition-all" title="Ver Perfil Premium">
                         <span className="material-symbols-outlined text-sm">visibility</span>
                       </Link>
-                      <Link href={`/models/edit?id=${model.id}`} className="p-2 hover:bg-primary/20 rounded-lg text-slate-400 hover:text-primary transition-all" title="Editar Perfilamiento">
+                      <Link href={`/models/${model.id}/edit`} className="p-2 hover:bg-primary/20 rounded-lg text-text-muted hover:text-primary transition-all" title="Editar Perfilamiento">
                         <span className="material-symbols-outlined text-sm">edit</span>
                       </Link>
                     </div>
@@ -261,7 +209,7 @@ export default function ModelsPage() {
           </table>
         )}
         
-        <div className="p-6 border-t border-primary/10 flex items-center justify-between text-xs text-slate-500">
+        <div className="p-6 border-t border-text-main/10 flex items-center justify-between text-xs text-text-muted">
           <div>Mostrando {realModels.length} modelos sincronizadas</div>
         </div>
       </div>

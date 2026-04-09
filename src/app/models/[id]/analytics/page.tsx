@@ -1,12 +1,63 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
+
+interface ModelData {
+  name: string;
+  nickname?: string;
+  status: string;
+}
 
 export default function ModelAnalytics() {
   const { id } = useParams();
+  const router = useRouter();
+  const [model, setModel] = useState<ModelData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('24h');
+
+  // Filter study internal users from the top tippers
+  const EXCLUDED_STUDIO_USERS = ["woow_studies", "woow_admin", "woow_monitor"];
+
+  useEffect(() => {
+    async function fetchModel() {
+      try {
+        const docRef = doc(db, "models", id as string);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          setModel(docSnap.data() as ModelData);
+        }
+      } catch (error) {
+        console.error("Error fetching model:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchModel();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-primary"></div>
+        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Cargando analíticas en vivo...</p>
+      </div>
+    );
+  }
+
+  if (!model) {
+    return (
+      <div className="p-12 text-center bg-red-500/5 border border-red-500/10 rounded-3xl">
+        <h3 className="text-xl font-bold text-red-500">Error al cargar modelo</h3>
+        <p className="text-slate-500 mt-2">No se encontró el perfil de la modelo para generar las analíticas.</p>
+        <button onClick={() => router.back()} className="mt-6 px-6 py-2 bg-primary text-white rounded-xl font-bold uppercase text-xs">Regresar</button>
+      </div>
+    );
+  }
 
   // Mock data for the analytics
   const metrics = [
@@ -38,35 +89,68 @@ export default function ModelAnalytics() {
             <div className="size-20 rounded-2xl bg-gradient-to-br from-primary to-accent-gold p-1 shadow-lg shadow-primary/20">
               <img src="https://i.pravatar.cc/150?img=32" alt="Avatar" className="size-full object-cover rounded-xl" />
             </div>
-            <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-white text-[10px] font-black px-2 py-1 rounded-full border-4 border-white dark:border-sidebar-dark animate-pulse">
-              EN VIVO
-            </div>
           </div>
           <div>
             <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
-              Análisis de transmisión
-              <span className="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-primary/10 px-2 py-1 rounded-lg border border-slate-200 dark:border-primary/20 uppercase tracking-widest">{id}</span>
+              {model.name} ({model.nickname || "sin_apodo"})
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 uppercase text-xs tracking-tighter">
-              Métricas en tiempo real via API • <span className="text-primary font-bold">Estado: En Vivo</span>
+              Análisis en ejecución • <span className="text-slate-400 font-mono text-[10px] uppercase">ID: {id?.toString().substring(0, 8)}</span>
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 bg-slate-100 dark:bg-primary/5 p-1.5 rounded-2xl border border-slate-200 dark:border-primary/10 h-fit">
-          {['24h', '7d', '30d', 'MTD'].map((range) => (
-            <button
-              key={range}
-              onClick={() => setTimeRange(range)}
-              className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${
-                timeRange === range 
-                  ? 'bg-white dark:bg-primary text-primary dark:text-white shadow-xl shadow-primary/20 scale-105' 
-                  : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'
-              }`}
-            >
-              {range}
-            </button>
-          ))}
+        <div className="flex flex-col md:flex-row items-center gap-3">
+          <button 
+            onClick={() => {
+              const exportData = {
+                reportType: "WooW Estudios - Live Analytics Snapshot",
+                exportDate: new Date().toISOString(),
+                model: { id, name: model.name, nickname: model.nickname },
+                timeRange: timeRange,
+                mainMetrics: metrics,
+                topUsers: topUsers,
+                aiPractices: practices,
+                systemLogs: [
+                  { time: '17:35:12', event: 'PROPINA DETECTADA', detail: '500 tks de User_01' },
+                  { time: '17:34:45', event: 'NUEVO USUARIO', detail: 'SecretFan_X se unió a la sala' },
+                  { time: '17:32:10', event: 'ALERT AI', detail: 'Interacción de chat bajando del 60%' }
+                ]
+              };
+              const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `WooW_Analytics_${model.nickname || model.name}_${timeRange}.json`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-primary/10 text-slate-700 dark:text-primary-foreground border border-slate-200 dark:border-primary/20 font-bold rounded-xl hover:bg-slate-200 dark:hover:bg-primary/20 transition-all text-xs"
+          >
+            <span className="material-symbols-outlined text-sm">download</span>
+            Exportar AI
+          </button>
+          <Link href={`/models/${id}`} className="text-xs font-bold text-slate-500 hover:text-primary transition-colors flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">visibility</span>
+            Ver Perfil
+          </Link>
+          <div className="flex items-center gap-3 bg-slate-100 dark:bg-primary/5 p-1.5 rounded-2xl border border-slate-200 dark:border-primary/10 h-fit">
+            {['24h', '7d', '30d', 'MTD'].map((range) => (
+              <button
+                key={range}
+                onClick={() => setTimeRange(range)}
+                className={`px-6 py-2 rounded-xl text-xs font-black transition-all ${
+                  timeRange === range 
+                    ? 'bg-white dark:bg-primary text-primary dark:text-white shadow-xl shadow-primary/20 scale-105' 
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-white'
+                }`}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -168,7 +252,9 @@ export default function ModelAnalytics() {
         <div className="bg-white dark:bg-sidebar-dark/40 p-8 rounded-3xl border border-slate-200 dark:border-primary/10 shadow-sm">
           <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Top Usuarios Interactivos</h3>
           <div className="space-y-4">
-            {topUsers.map((user, i) => (
+            {topUsers
+              .filter(user => !EXCLUDED_STUDIO_USERS.includes(user.name.toLowerCase()))
+              .map((user, i) => (
               <div key={user.name} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 dark:border-primary/5 hover:bg-slate-50 dark:hover:bg-primary/5 transition-all cursor-pointer group">
                 <div className="flex items-center gap-4">
                   <div className="text-sm font-black text-slate-300 w-4">#{i+1}</div>

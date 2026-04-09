@@ -2,10 +2,28 @@
 
 import React from "react";
 import { usePlatforms } from "@/context/PlatformContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SettingsPage() {
   const { platforms, addPlatform, removePlatform } = usePlatforms();
+  const { theme, toggleTheme } = useTheme();
+  const { profile, loading } = useAuth();
   const [newPlatform, setNewPlatform] = React.useState("");
+
+  if (loading) return null;
+
+  if (profile?.role !== 'admin') {
+    return (
+      <div className="p-8 flex flex-col items-center justify-center min-h-[60vh] text-center">
+        <div className="size-20 bg-red-500/10 rounded-full flex items-center justify-center mb-6 border border-red-500/20">
+          <span className="material-symbols-outlined text-red-500 text-5xl">lock</span>
+        </div>
+        <h2 className="text-2xl font-bold text-text-main mb-2">Acceso Restringido</h2>
+        <p className="text-text-muted max-w-md">Lo sentimos, esta sección es de uso exclusivo para Administradores de WooW Estudios.</p>
+      </div>
+    );
+  }
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,17 +36,17 @@ export default function SettingsPage() {
   return (
     <div className="p-8">
       <div className="mb-10">
-        <h2 className="text-3xl font-display font-bold text-white mb-2">Configuración</h2>
-        <p className="text-slate-400">Personaliza el portal y gestiona los parámetros generales del estudio.</p>
+        <h2 className="text-3xl font-display font-bold text-text-main mb-2">Configuración</h2>
+        <p className="text-text-muted">Personaliza el portal y gestiona los parámetros generales del estudio.</p>
       </div>
 
       <div className="max-w-4xl space-y-8">
         {/* Gestión de Plataformas */}
-        <div className="bg-sidebar-dark/50 border border-primary/20 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-panel-dark border border-primary/20 rounded-2xl overflow-hidden shadow-xl">
             <div className="p-6 border-b border-primary/20 bg-primary/5 flex items-center justify-between">
                 <div>
-                    <h3 className="font-bold text-white text-lg">Plataformas de Transmisión</h3>
-                    <p className="text-xs text-slate-500">Agrega o elimina plataformas disponibles para las modelos.</p>
+                    <h3 className="font-bold text-text-main text-lg">Plataformas de Transmisión</h3>
+                    <p className="text-xs text-text-muted">Agrega o elimina plataformas disponibles para las modelos.</p>
                 </div>
                 <span className="material-symbols-outlined text-primary">stream</span>
             </div>
@@ -39,7 +57,7 @@ export default function SettingsPage() {
                         value={newPlatform}
                         onChange={(e) => setNewPlatform(e.target.value)}
                         placeholder="Nombre de la nueva plataforma..." 
-                        className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all"
+                        className="flex-1 bg-background-dark border border-primary/20 rounded-xl px-4 py-3 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all placeholder:text-slate-400"
                     />
                     <button 
                         type="submit"
@@ -66,26 +84,33 @@ export default function SettingsPage() {
             </div>
         </div>
 
-        <div className="bg-sidebar-dark/50 border border-primary/20 rounded-2xl overflow-hidden">
-            <div className="p-6 border-b border-primary/10">
-                <h3 className="font-bold text-white">General</h3>
+        <div className="bg-panel-dark border border-primary/20 rounded-2xl overflow-hidden shadow-lg">
+            <div className="p-6 border-b border-primary/10 bg-primary/5">
+                <h3 className="font-bold text-slate-900 dark:text-white">General</h3>
             </div>
-            <div className="p-6 space-y-4">
+            <div className="p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-bold text-slate-300">Modo Oscuro</p>
-                        <p className="text-xs text-slate-500">Alternar tema visual del portal</p>
+                        <p className="text-sm font-bold text-text-main">Modo Oscuro</p>
+                        <p className="text-xs text-text-muted">Alternar tema visual del portal (Claro/Oscuro)</p>
                     </div>
-                    <div className="w-12 h-6 bg-primary rounded-full relative flex items-center px-1">
-                        <div className="size-4 bg-white rounded-full ml-auto"></div>
-                    </div>
+                    <button 
+                        onClick={toggleTheme}
+                        className={`w-14 h-7 rounded-full transition-all relative flex items-center px-1 ${theme === 'dark' ? 'bg-primary' : 'bg-slate-300'}`}
+                    >
+                        <div className={`size-5 bg-white rounded-full shadow-md transition-all flex items-center justify-center ${theme === 'dark' ? 'ml-auto' : 'ml-0'}`}>
+                            <span className="material-symbols-outlined text-[12px] text-slate-700">
+                                {theme === 'dark' ? 'dark_mode' : 'light_mode'}
+                            </span>
+                        </div>
+                    </button>
                 </div>
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-bold text-slate-300">Idioma</p>
-                        <p className="text-xs text-slate-500">Preferencia de lenguaje del sistema</p>
+                        <p className="text-sm font-bold text-text-main">Idioma</p>
+                        <p className="text-xs text-text-muted">Preferencia de lenguaje del sistema</p>
                     </div>
-                    <select className="bg-background-dark border border-primary/20 rounded-lg px-3 py-1 text-xs text-white">
+                    <select className="bg-background-page border border-primary/20 rounded-lg px-3 py-1 text-xs text-text-main outline-none">
                         <option>Español</option>
                         <option>Inglés</option>
                     </select>
@@ -93,16 +118,7 @@ export default function SettingsPage() {
             </div>
         </div>
 
-        <div className="bg-sidebar-dark/50 border border-primary/20 rounded-2xl overflow-hidden">
-            <div className="p-6 border-b border-primary/10 text-red-400">
-                <h3 className="font-bold">Zona de Peligro</h3>
-            </div>
-            <div className="p-6">
-                <button className="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/30 rounded-lg text-xs font-bold transition-all">
-                    Resetear Datos del Portal
-                </button>
-            </div>
-        </div>
+        {/* Zona de Peligro deshabilitada para proteger proyecto 7288e */}
       </div>
     </div>
   );

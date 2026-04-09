@@ -1,0 +1,92 @@
+{
+  "scannedFiles": [
+    {
+      "name": "Sara_Love_1_2026-03-01_to_2026-03-15.csv",
+      "headers": [
+        "Usuarios",
+        "Fecha",
+        "Tipo",
+        "Tokens"
+      ],
+      "rowCount": 714,
+      "sampleRows": [
+        {
+          "Usuarios": "WooW_Estudios",
+          "Fecha": "15 de marzo de 2026 19:11",
+          "Tipo": "Transferencia a estudio",
+          "Tokens": "-2 632"
+        },
+        {
+          "Usuarios": "gk9494",
+          "Fecha": "14 de marzo de 2026 05:20",
+          "Tipo": "Privado Exclusivo",
+          "Tokens": 16
+        },
+        {
+          "Usuarios": "gk9494",
+          "Fecha": "14 de marzo de 2026 05:19",
+          "Tipo": "Privado Exclusivo",
+          "Tokens": 16
+        }
+      ]
+    },
+    {
+      "name": "Sara_Love_1_2026-03-16_to_2026-03-31.csv",
+      "headers": [
+        "Usuarios",
+        "Fecha",
+        "Tipo",
+        "Tokens"
+      ],
+      "rowCount": 443,
+      "sampleRows": [
+        {
+          "Usuarios": "Yarsgk",
+          "Fecha": "31 de marzo de 2026 05:55",
+          "Tipo": "Propina pública",
+          "Tokens": 1
+        },
+        {
+          "Usuarios": "Yarsgk",
+          "Fecha": "31 de marzo de 2026 05:54",
+          "Tipo": "Propina pública",
+          "Tokens": 1
+        },
+        {
+          "Usuarios": "Yarsgk",
+          "Fecha": "31 de marzo de 2026 05:54",
+          "Tipo": "Propina pública",
+          "Tokens": 1
+        }
+      ]
+    }
+  ],
+  "actionTypes": [
+    "privado exclusivo",
+    "propina publica",
+    "show privado",
+    "compra de foto",
+    "propina de show privado",
+    "privado exclusivo-20%",
+    "propina privada",
+    "show privado-20%",
+    "modo espia en show privado",
+    "propina anonima",
+    "animacion privada",
+    "extension: wheel of fortune",
+    "extension: reactions",
+    "propina anonima: objetivo epico",
+    "propina de agradecimiento por el show privado"
+  ],
+  "period": "2026-03-01_to_2026-03-31",
+  "startStr": "2026-03-01",
+  "endStr": "2026-03-31",
+  "periodStartTime": 1772341200000,
+  "periodEndTime": 1775019599999,
+  "stats": {
+    "totalTokens": 10400,
+    "tipTokens": 2792,
+    "privateTokens": 7608,
+    "fileFoundAndParsed": true
+  }
+}

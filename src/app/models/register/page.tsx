@@ -64,6 +64,8 @@ export default function ModelRegistrationPage() {
   const [activeHashtag, setActiveHashtag] = useState<HashtagItem | null>(null);
   const [activeOutfit, setActiveOutfit] = useState<OutfitItem | null>(null);
   const [apiEnabledPlatforms, setApiEnabledPlatforms] = useState<string[]>([]);
+  const [platformAliases, setPlatformAliases] = useState<{[key: string]: string[]}>({ "Chaturbate": [], "Stripchat": [] });
+  const [newAliasInputs, setNewAliasInputs] = useState<{[key: string]: string}>({ "Chaturbate": "", "Stripchat": "" });
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [existingModels, setExistingModels] = useState<any[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);
@@ -163,6 +165,7 @@ export default function ModelRegistrationPage() {
             setPlatformCredentials(syncedCredentials);
           }
 
+          if (profileData.platformAliases) setPlatformAliases(prev => ({ ...prev, ...profileData.platformAliases }));
           setApiEnabledPlatforms(profileData.apiEnabledPlatforms || modelPlatforms);
         } else {
           // Si no hay perfil V2, valores por defecto
@@ -224,6 +227,7 @@ export default function ModelRegistrationPage() {
         modelId: selectedModelId,
         generalInfo,
         credentials: platformCredentials,
+        platformAliases,
         physicalAttributes,
         selectedKinks,
         selectedToys,
@@ -313,6 +317,23 @@ export default function ModelRegistrationPage() {
     setSelectedOutfits(prev => 
       prev.includes(name) ? prev.filter(o => o !== name) : [...prev, name]
     );
+  };
+
+  const addAlias = (platform: string) => {
+    const val = newAliasInputs[platform]?.trim();
+    if (!val) return;
+    setPlatformAliases(prev => ({
+      ...prev,
+      [platform]: Array.from(new Set([...(prev[platform] || []), val]))
+    }));
+    setNewAliasInputs(prev => ({ ...prev, [platform]: "" }));
+  };
+
+  const removeAlias = (platform: string, alias: string) => {
+    setPlatformAliases(prev => ({
+      ...prev,
+      [platform]: prev[platform].filter(a => a !== alias)
+    }));
   };
 
   const addCustomOutfit = () => {
@@ -513,10 +534,10 @@ export default function ModelRegistrationPage() {
       <div className="mb-10 lg:flex items-start justify-between gap-10">
         <div className="flex-1">
           <h3 className="font-display text-4xl font-extrabold mb-2 bg-gradient-to-r from-primary to-accent-gold bg-clip-text text-transparent">
-            Registro de modelo
+            Perfilamiento & Optimización
           </h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6">
-            Completa el perfilamiento para registrar una nueva modelo en el estudio. La información detallada ayuda a un mejor posicionamiento.
+            Complementa la información técnica y artística de las modelos registradas en la base central. Esta aplicación no puede modificar los datos básicos de 7288e.
           </p>
           
           <div className="bg-primary/5 dark:bg-primary/10 border border-slate-200 dark:border-primary/20 rounded-2xl p-6 flex items-center gap-6 shadow-sm">
@@ -679,63 +700,102 @@ export default function ModelRegistrationPage() {
                             </span>
                             <h6 className="font-bold text-white tracking-wide">{platform}</h6>
                           </div>
-                          
-                          <label className="flex items-center gap-2 cursor-pointer group">
-                            <input 
-                              type="checkbox" 
-                              className="w-4 h-4 rounded border-slate-700 bg-slate-800 text-primary focus:ring-primary/50"
-                              checked={isApiEnabled}
-                              onChange={() => {
-                                setApiEnabledPlatforms(prev => 
-                                  prev.includes(platform) 
-                                    ? prev.filter(p => p !== platform) 
-                                    : [...prev, platform]
-                                );
-                              }}
-                            />
-                            <span className="text-[10px] font-black uppercase tracking-tighter text-slate-400 group-hover:text-primary transition-colors">
-                              Usar API
-                            </span>
-                          </label>
                         </div>
-                        
-                        {isApiEnabled ? (
-                          <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
-                            <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Usuario / ID</label>
+
+                        {/* Section: Platform Aliases in Driver - ALWAYS VISIBLE FIRST */}
+                        <div className="mb-6 p-4 bg-primary/5 rounded-2xl border border-primary/20 shadow-inner">
+                           <label className="block text-[10px] font-black uppercase tracking-widest text-primary mb-2 flex items-center gap-2">
+                             <span className="material-symbols-outlined text-sm">cloud_sync</span>
+                             Apodos en Drive (Alias)
+                           </label>
+                           <div className="flex gap-2 mb-3">
                               <input 
                                 type="text"
-                                className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary ring-offset-0 outline-none transition-all"
-                                placeholder={`Usuario en ${platform}`}
-                                value={platformCredentials[platform]?.username || ""}
-                                onChange={(e) => setPlatformCredentials(prev => ({
-                                  ...prev,
-                                  [platform]: { ...prev[platform], username: e.target.value }
-                                }))}
+                                value={newAliasInputs[platform] || ""}
+                                onChange={(e) => setNewAliasInputs(prev => ({ ...prev, [platform]: e.target.value }))}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    addAlias(platform);
+                                  }
+                                }}
+                                placeholder="Ej: Natalia_Kiss01"
+                                className="flex-1 bg-slate-950/50 border border-slate-700/50 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-primary/50 transition-all font-bold"
                               />
-                            </div>
-                            <div>
-                              <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1.5 ml-1">Clave API</label>
+                              <button 
+                                type="button"
+                                onClick={() => addAlias(platform)}
+                                className="bg-primary text-white px-3 rounded-xl hover:scale-105 transition-all shadow-lg shadow-primary/20"
+                              >
+                                <span className="material-symbols-outlined text-[18px] leading-none">add</span>
+                              </button>
+                           </div>
+                           <div className="flex flex-wrap gap-2 min-h-[22px]">
+                              {platformAliases[platform]?.map((alias: string) => (
+                                <div key={alias} className="flex items-center gap-2 bg-primary/20 border border-primary/30 px-3 py-1.5 rounded-lg group animate-in zoom-in-95">
+                                   <span className="text-[10px] font-bold text-white">{alias}</span>
+                                   <button type="button" onClick={() => removeAlias(platform, alias)} className="text-white/40 hover:text-red-400 transition-colors">
+                                      <span className="material-symbols-outlined text-[14px]">close</span>
+                                   </button>
+                                </div>
+                              ))}
+                              {(!platformAliases[platform] || platformAliases[platform].length === 0) && (
+                                <p className="text-[10px] text-slate-500 italic ml-1">Escribe su apodo en Drive arriba y dale a "+".</p>
+                              )}
+                           </div>
+                        </div>
+                        
+                        {/* API Integration - OPTIONAL AT BOTTOM */}
+                        <div className="pt-4 border-t border-slate-800/50">
+                           <label className="flex items-center gap-3 cursor-pointer group mb-4">
                               <div className="relative">
                                 <input 
+                                  type="checkbox" 
+                                  className="peer sr-only"
+                                  checked={isApiEnabled}
+                                  onChange={() => {
+                                    setApiEnabledPlatforms(prev => 
+                                      prev.includes(platform) 
+                                        ? prev.filter(p => p !== platform) 
+                                        : [...prev, platform]
+                                    );
+                                  }}
+                                />
+                                <div className="w-10 h-5 bg-slate-800 rounded-full peer-checked:bg-primary transition-all"></div>
+                                <div className="absolute left-1 top-1 w-3 h-3 bg-white rounded-full peer-checked:translate-x-5 transition-all"></div>
+                              </div>
+                              <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-primary transition-colors">
+                                Integración API {isApiEnabled ? 'Activa' : 'Inactiva'}
+                              </span>
+                           </label>
+
+                           {isApiEnabled ? (
+                              <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <input 
+                                  type="text"
+                                  className="w-full bg-slate-950/30 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-primary/30"
+                                  placeholder={`Usuario en ${platform}`}
+                                  value={platformCredentials[platform]?.username || ""}
+                                  onChange={(e) => setPlatformCredentials(prev => ({
+                                    ...prev,
+                                    [platform]: { ...prev[platform], username: e.target.value }
+                                  }))}
+                                />
+                                <input 
                                   type="password"
-                                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-sm text-white focus:ring-1 focus:ring-primary ring-offset-0 outline-none transition-all pr-10"
-                                  placeholder="••••••••••••••••"
+                                  className="w-full bg-slate-950/30 border border-slate-800 rounded-xl px-4 py-2 text-xs text-white outline-none focus:border-primary/30"
+                                  placeholder="API Key / Secret"
                                   value={platformCredentials[platform]?.apiKey || ""}
                                   onChange={(e) => setPlatformCredentials(prev => ({
                                     ...prev,
                                     [platform]: { ...prev[platform], apiKey: e.target.value }
                                   }))}
                                 />
-                                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 text-sm">key</span>
                               </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="h-24 flex items-center justify-center border border-dashed border-slate-800 rounded-xl bg-slate-900/20">
-                            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">Integración desactivada</p>
-                          </div>
-                        )}
+                           ) : (
+                             <p className="text-[9px] text-slate-700 italic ml-2">Solo usa Drive para estadísticas.</p>
+                           )}
+                        </div>
                       </div>
                     );
                   })}

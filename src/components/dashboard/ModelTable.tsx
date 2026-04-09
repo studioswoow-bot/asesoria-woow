@@ -32,62 +32,37 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
   }
 
   return (
-    <div className="bg-sidebar-dark/50 rounded-2xl border border-primary/20 shadow-xl shadow-black/20 overflow-hidden">
+    <div className="bg-panel-dark rounded-2xl border border-text-main/10 shadow-xl shadow-black/20 overflow-hidden transition-colors">
       <table className="w-full text-left border-collapse">
         <thead>
           <tr className="bg-primary/5 border-b border-primary/10">
-            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Perfil</th>
-            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Estado</th>
-            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Categoría</th>
-            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Progreso</th>
-            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Última Actividad</th>
-            <th className="py-4 px-6 text-center text-[10px] font-black text-slate-500 uppercase tracking-widest">Acciones</th>
+            <th className="py-4 px-6 text-[10px] font-black text-text-muted uppercase tracking-widest">Perfil</th>
+            <th className="py-4 px-6 text-[10px] font-black text-text-muted uppercase tracking-widest">Categoría</th>
+            <th className="py-4 px-6 text-[10px] font-black text-text-muted uppercase tracking-widest">Progreso</th>
+            <th className="py-4 px-6 text-[10px] font-black text-text-muted uppercase tracking-widest">Última Actividad</th>
+            <th className="py-4 px-6 text-center text-[10px] font-black text-text-muted uppercase tracking-widest">Acciones</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-primary/5">
           {models.length === 0 ? (
             <tr>
-              <td colSpan={6} className="py-10 text-center text-slate-500 text-sm italic">
+              <td colSpan={5} className="py-10 text-center text-text-muted text-sm italic">
                 No se encontraron modelos registradas.
               </td>
             </tr>
           ) : (
             models.map((model) => (
-              <tr key={model.id} className="hover:bg-primary/5 transition-colors group">
+              <tr key={model.id} className="hover:bg-text-main/5 transition-colors group">
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/30 shrink-0 uppercase">
                       {typeof model.name === 'string' ? model.name.split(" ").map(n => n[0]).join("").substring(0, 2) : "M"}
                     </div>
                     <div>
-                      <p className="text-sm font-bold text-white group-hover:text-primary transition-colors">{String(model.name || "Sin nombre")}</p>
-                      <p className="text-[10px] text-slate-500">@{String(model.nickname || "sin_apodo")}</p>
+                      <p className="text-sm font-bold text-text-main group-hover:text-primary transition-colors">{String(model.name || "Sin nombre")} ({String(model.nickname || "sin_apodo")})</p>
+                      <p className="text-[10px] text-text-muted">@{String(model.nickname || "sin_apodo")}</p>
                     </div>
                   </div>
-                </td>
-                <td className="py-4 px-6">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase border animate-in fade-in duration-500 ${
-                    (() => {
-                      if (!model.isOnline) return "bg-slate-500/10 text-slate-500 border-slate-500/20";
-                      const s = (model.syncStatus || "").toLowerCase();
-                      if (s === "public") return "bg-green-500/10 text-green-500 border-green-500/20";
-                      if (s === "private") return "bg-purple-500/10 text-purple-500 border-purple-500/20";
-                      if (s === "away") return "bg-amber-500/10 text-amber-500 border-amber-500/20";
-                      return "bg-slate-500/10 text-slate-500 border-slate-500/20";
-                    })()
-                  }`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${
-                      (() => {
-                        if (!model.isOnline) return "bg-slate-500";
-                        const s = (model.syncStatus || "").toLowerCase();
-                        if (s === "public") return "bg-green-500 animate-pulse";
-                        if (s === "private") return "bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]";
-                        if (s === "away") return "bg-amber-500";
-                        return "bg-slate-500";
-                      })()
-                    }`}></span>
-                    {model.isOnline ? (model.syncStatus || "Online") : "Offline"}
-                  </span>
                 </td>
                 <td className="py-4 px-6">
                   <div className="flex gap-1">
@@ -96,7 +71,7 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                 </td>
                 <td className="py-4 px-6 min-w-[140px]">
                   <div className="flex items-center gap-3">
-                    <div className="flex-1 h-1.5 bg-primary/10 rounded-full overflow-hidden border border-primary/5">
+                    <div className="flex-1 h-1.5 bg-text-main/10 rounded-full overflow-hidden border border-text-main/5">
                       <div 
                         className={`h-full transition-all duration-1000 ${
                           (model.progress || 0) === 100 ? 'bg-emerald-500' : 
@@ -106,22 +81,22 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                       ></div>
                     </div>
                     <span className={`text-[10px] font-black w-8 ${
-                      (model.progress || 0) === 100 ? 'text-emerald-500' : 'text-slate-400'
+                      (model.progress || 0) === 100 ? 'text-emerald-500' : 'text-text-muted'
                     }`}>
                       {model.progress || 0}%
                     </span>
                   </div>
                 </td>
-                <td className="py-4 px-6 text-xs text-slate-400">{model.lastActive ? String(model.lastActive) : "Desconocido"}</td>
+                <td className="py-4 px-6 text-xs text-text-muted">{model.lastActive ? String(model.lastActive) : "Desconocido"}</td>
                 <td className="py-4 px-6 text-center">
                   <div className="flex items-center justify-center gap-2">
-                    <Link href={`/models/analytics?id=${model.id}`} className="p-2 text-slate-400 hover:text-accent-gold hover:bg-accent-gold/10 rounded-lg transition-all" title="Insights & Análisis">
+                    <Link href={`/models/analytics?id=${model.id}`} className="p-2 text-text-muted hover:text-accent-gold hover:bg-accent-gold/10 rounded-lg transition-all" title="Insights & Análisis">
                       <span className="material-symbols-outlined text-[18px]">monitoring</span>
                     </Link>
-                    <Link href={`/models/profile?id=${model.id}`} className="p-2 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Ver Perfil">
+                    <Link href={`/models/profile?id=${model.id}`} className="p-2 text-text-muted hover:text-primary hover:bg-primary/10 rounded-lg transition-all" title="Ver Perfil">
                       <span className="material-symbols-outlined text-[18px]">visibility</span>
                     </Link>
-                    <Link href={`/models/edit?id=${model.id}`} className="p-2 text-slate-400 hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" title="Editar">
+                    <Link href={`/models/edit?id=${model.id}`} className="p-2 text-text-muted hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" title="Editar / Completar Perfil">
                       <span className="material-symbols-outlined text-[18px]">edit</span>
                     </Link>
                   </div>
@@ -132,8 +107,8 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
         </tbody>
       </table>
       
-      <div className="px-6 py-4 border-t border-primary/10 flex items-center justify-between bg-primary/5">
-        <p className="text-xs text-slate-500">Mostrando {models.length} modelos en tiempo real</p>
+      <div className="px-6 py-4 border-t border-text-main/10 flex items-center justify-between bg-text-main/5">
+        <p className="text-xs text-text-muted">Mostrando {models.length} modelos en tiempo real</p>
       </div>
     </div>
   );

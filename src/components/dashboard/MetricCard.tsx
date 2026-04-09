@@ -19,28 +19,32 @@ export default function MetricCard({
   trendColor = "emerald",
   subtext
 }: MetricCardProps) {
-  const trendColorClasses = {
-    emerald: "text-emerald-500 bg-emerald-50",
-    blue: "text-blue-500 bg-blue-50",
-    red: "text-red-500 bg-red-50"
+  const getTrendColorClass = () => {
+    switch (trendColor) {
+      case "blue": return "text-blue-500";
+      case "red": return "text-red-500";
+      default: return "text-emerald-500";
+    }
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-panel-dark border border-text-main/5 p-6 rounded-2xl shadow-lg shadow-black/10 transition-colors">
       <div className="flex items-center justify-between mb-4">
-        <div className="h-12 w-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
-          <span className="material-symbols-outlined text-[24px]">{icon}</span>
+        <div className="size-12 bg-primary/10 rounded-xl flex items-center justify-center">
+          <span className="material-symbols-outlined text-primary text-2xl">{icon}</span>
         </div>
-        {trendValue && (
-          <span className={`text-sm font-medium flex items-center gap-1 px-2 py-1 rounded-full ${trendColorClasses[trendColor]}`}>
-            <span className="material-symbols-outlined text-[16px]">{trendIcon}</span>
-            {trendValue}
-          </span>
+        {(trendValue || trendColor) && (
+          <div className={`flex items-center gap-1 ${getTrendColorClass()} px-2 py-1 bg-current/5 rounded-full`}>
+            {trendValue && <span className="text-[11px] font-bold">{trendValue}</span>}
+            <span className="material-symbols-outlined text-sm">trending_up</span>
+          </div>
         )}
       </div>
-      <h3 className="text-3xl font-display font-bold text-slate-900 mb-1">{value}</h3>
-      <p className="text-sm font-medium text-slate-500">{title}</p>
-      {subtext && <p className="text-xs text-slate-400 mt-2">{subtext}</p>}
+      <div>
+        <p className="text-sm font-bold text-text-muted mb-1">{title}</p>
+        <h3 className="text-3xl font-display font-black text-text-main">{value}</h3>
+        {subtext && <p className="text-[10px] text-text-muted mt-2 font-medium uppercase tracking-wider">{subtext}</p>}
+      </div>
     </div>
   );
 }

@@ -1,0 +1,194 @@
+{
+  "modelId": "VxUWmOkWRWPgEvYv5MJt",
+  "nickname": "silacitex_effys",
+  "status": "public",
+  "viewers": 13,
+  "totalTokensFound": 0,
+  "synced_at": "2026-03-24T04:05:34.311Z",
+  "tippers": {},
+  "events": [
+    {
+      "method": "userLeave",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "g",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": false,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": false,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "en",
+          "recentTips": "none",
+          "subgender": "",
+          "username": "khfdgjnfdgnmvc"
+        }
+      },
+      "id": "1774325049672-0"
+    },
+    {
+      "method": "userEnter",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "g",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": false,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": false,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "en",
+          "recentTips": "none",
+          "subgender": "",
+          "username": "khfdgjnfdgnmvc"
+        }
+      },
+      "id": "1774325049774-0"
+    },
+    {
+      "method": "userLeave",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "p",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": true,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": false,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "es",
+          "recentTips": "lots",
+          "subgender": "",
+          "username": "xxxxx722622"
+        }
+      },
+      "id": "1774325058327-0"
+    },
+    {
+      "method": "userEnter",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "p",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": true,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": false,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "es",
+          "recentTips": "lots",
+          "subgender": "",
+          "username": "xxxxx722622"
+        }
+      },
+      "id": "1774325058491-0"
+    },
+    {
+      "method": "userLeave",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "tr",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": true,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": true,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "fr",
+          "recentTips": "some",
+          "subgender": "",
+          "username": "remylenoir1980"
+        }
+      },
+      "id": "1774325069496-0"
+    },
+    {
+      "method": "userEnter",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "g",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": false,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": true,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "en",
+          "recentTips": "none",
+          "subgender": "",
+          "username": "c_roc"
+        }
+      },
+      "id": "1774325083592-0"
+    },
+    {
+      "method": "userEnter",
+      "object": {
+        "broadcaster": "silacitex_effys",
+        "user": {
+          "colorGroup": "l",
+          "fcAutoRenew": false,
+          "gender": "m",
+          "hasDarkmode": false,
+          "hasTokens": true,
+          "inFanclub": false,
+          "inPrivateShow": false,
+          "isBroadcasting": false,
+          "isFollower": false,
+          "isMod": false,
+          "isOwner": false,
+          "isSilenced": false,
+          "isSpying": false,
+          "language": "en",
+          "recentTips": "tons",
+          "subgender": "",
+          "username": "nick634989"
+        }
+      },
+      "id": "1774325116726-0"
+    }
+  ],
+  "source": "chaturbate_api_v1"
+}

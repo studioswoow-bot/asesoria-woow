@@ -20,34 +20,24 @@ export default function UsersPage() {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [showModal, setShowModal] = useState(false);
-  
-  // Create User form state
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [role, setRole] = useState("monitor");
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login");
     } else if (!authLoading && user && profile && profile.role !== "admin") {
-      // FIX #12 / Seguridad: Solo admins pueden gestionar usuarios
-      setError("Acceso denegado: Solo los Administradores pueden gestionar usuarios.");
+      setError("Acceso denegado: Solo los Administradores pueden consultar el listado de usuarios.");
     }
   }, [user, profile, authLoading, router]);
 
   useEffect(() => {
-    if (user) {
+    if (user && profile?.role === "admin") {
       fetchUsers();
     }
-  }, [user]);
+  }, [user, profile]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      // FIX #1: Enviar token de autenticación al endpoint protegido
       const token = await user!.getIdToken();
       const res = await fetch("/api/users", {
         headers: { Authorization: `Bearer ${token}` },
@@ -62,69 +52,6 @@ export default function UsersPage() {
     }
   };
 
-  const handleCreateUser = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError("");
-
-    // FIX #12: Validación de contraseña en el cliente antes del request
-    if (password.length < 6) {
-      setError("La contraseña debe tener al menos 6 caracteres.");
-      setSubmitting(false);
-      return;
-    }
-    
-    try {
-      // FIX #1: Enviar token de autenticación al endpoint protegido
-      const token = await user!.getIdToken();
-      const res = await fetch("/api/users", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ displayName: name, email, password, role }),
-      });
-      
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      
-      setShowModal(false);
-      setName("");
-      setEmail("");
-      setPassword("");
-      setRole("monitor");
-      fetchUsers();
-    } catch (err: any) {
-      setError("Error al crear usuario: " + err.message);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteUser = async (uid: string) => {
-    if (!confirm("¿Estás seguro de que quieres eliminar este usuario? Esta acción no se puede deshacer.")) return;
-    
-    try {
-      // FIX #1: Enviar token de autenticación al endpoint protegido
-      const token = await user!.getIdToken();
-      const res = await fetch("/api/users", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ uid }),
-      });
-      
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      fetchUsers();
-    } catch (err: any) {
-      setError("Error al eliminar usuario: " + err.message);
-    }
-  };
-
   if (authLoading) return <div className="p-8 text-center text-slate-400">Cargando sesión...</div>;
   if (!user) return null;
 
@@ -132,18 +59,15 @@ export default function UsersPage() {
     <div className="p-8 space-y-8 animate-in fade-in duration-700">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-4xl font-display font-black text-white mb-2 bg-gradient-to-r from-primary to-accent-gold bg-clip-text text-transparent">Gestión de Usuarios</h2>
-          <p className="text-slate-400 flex items-center gap-2">
-            Control de perfiles para administradores y monitores de <strong>WooW Estudios</strong>.
+          <h2 className="text-4xl font-display font-black text-text-main mb-2">Consulta de Staff</h2>
+          <p className="text-text-muted flex items-center gap-2">
+            Listado de perfiles compartidos con el proyecto <strong>7288e</strong>.
           </p>
         </div>
-        <button 
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-6 py-4 bg-primary text-white font-black rounded-2xl hover:bg-primary/90 transition-all shadow-xl shadow-primary/20"
-        >
-          <span className="material-symbols-outlined">person_add</span>
-          Crear Nuevo Usuario
-        </button>
+        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-3 rounded-xl flex items-center gap-3 text-amber-500 text-xs font-bold max-w-xs">
+          <span className="material-symbols-outlined">shield_lock</span>
+          Esta vista es de solo lectura. Para gestionar usuarios, usa el Panel Central de Estudios WooW.
+        </div>
       </div>
 
       {error && (
@@ -161,8 +85,8 @@ export default function UsersPage() {
               <span className="material-symbols-outlined text-3xl">admin_panel_settings</span>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Administrador</h3>
-              <p className="text-xs text-slate-500">Permisos totales y gestión de sistema.</p>
+              <h3 className="text-lg font-bold text-text-main">Administrador</h3>
+              <p className="text-xs text-text-muted">Permisos totales en el sistema central.</p>
             </div>
           </div>
         </div>
@@ -172,42 +96,41 @@ export default function UsersPage() {
               <span className="material-symbols-outlined text-3xl">monitoring</span>
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white">Monitor</h3>
-              <p className="text-xs text-slate-500">Supervisión operativa y soporte.</p>
+              <h3 className="text-lg font-bold text-text-main">Monitor</h3>
+              <p className="text-xs text-text-muted">Personal operativo de supervisión.</p>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-sidebar-dark/30 border border-white/5 rounded-3xl overflow-hidden shadow-2xl backdrop-blur-xl">
+      <div className="bg-panel-dark border border-text-main/10 rounded-3xl overflow-hidden shadow-2xl transition-colors">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-white/5 border-b border-white/10 uppercase tracking-widest text-[10px] font-black text-slate-400">
+              <tr className="bg-text-main/5 border-b border-text-main/10 uppercase tracking-widest text-[10px] font-black text-text-muted">
                 <th className="px-8 py-5">UID</th>
                 <th className="px-8 py-5">Usuario/Email</th>
                 <th className="px-8 py-5">Rol</th>
                 <th className="px-8 py-5">Creado</th>
                 <th className="px-8 py-5">Último Acceso</th>
-                <th className="px-8 py-5 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
               {loading ? (
                 <tr>
-                   <td colSpan={6} className="px-8 py-20 text-center text-slate-500 italic">Cargando base de datos de usuarios...</td>
+                   <td colSpan={5} className="px-8 py-20 text-center text-slate-500 italic">Sincronizando con base de datos central...</td>
                 </tr>
               ) : users.length === 0 ? (
                 <tr>
-                   <td colSpan={6} className="px-8 py-20 text-center text-slate-500 italic">No hay usuarios registrados.</td>
+                   <td colSpan={5} className="px-8 py-20 text-center text-slate-500 italic">No hay registros visibles o sincronizados.</td>
                 </tr>
               ) : users.map((u) => (
                 <tr key={u.uid} className="hover:bg-white/5 transition-colors group">
                   <td className="px-8 py-5 font-mono text-[11px] text-slate-500">{u.uid.slice(0, 8)}...</td>
                   <td className="px-8 py-5">
                     <div className="flex flex-col">
-                      <span className="text-white font-bold">{u.displayName}</span>
-                      <span className="text-slate-500 text-xs">{u.email}</span>
+                      <span className="text-text-main font-bold">{u.displayName}</span>
+                      <span className="text-text-muted text-xs">{u.email}</span>
                     </div>
                   </td>
                   <td className="px-8 py-5">
@@ -219,101 +142,18 @@ export default function UsersPage() {
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-8 py-5 text-slate-400 text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
-                  <td className="px-8 py-5 text-slate-500 text-sm">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "Nunca"}</td>
-                  <td className="px-8 py-5 text-right">
-                    <button 
-                      onClick={() => handleDeleteUser(u.uid)}
-                      disabled={u.uid === user.uid}
-                      className="size-10 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500 flex items-center justify-center hover:text-white transition-all disabled:opacity-0"
-                    >
-                      <span className="material-symbols-outlined text-lg">delete</span>
-                    </button>
-                  </td>
+                  <td className="px-8 py-5 text-text-muted text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
+                  <td className="px-8 py-5 text-text-muted text-sm">{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : "Nunca"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
-
-      {/* Modal para Crear Usuario */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background-dark/80 backdrop-blur-md">
-          <div className="w-full max-w-xl bg-sidebar-dark border border-white/10 rounded-3xl shadow-2xl p-10 animate-in zoom-in duration-300">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-black text-white">Nuevo Integrante</h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-500 hover:text-white transition-colors">
-                <span className="material-symbols-outlined text-3xl">close</span>
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateUser} className="space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre Completo</label>
-                  <input 
-                    type="text" 
-                    required 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-4 bg-background-dark border border-white/5 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Ej: Juan Pérez"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Email Corporativo</label>
-                  <input 
-                    type="email" 
-                    required 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-4 bg-background-dark border border-white/5 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="email@estudioswoow.com"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Contraseña Inicial</label>
-                  <input 
-                    type="password" 
-                    required 
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-4 bg-background-dark border border-white/5 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="Mín. 6 caracteres"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Perfil (Rol)</label>
-                  <select 
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full px-4 py-4 bg-background-dark border border-white/5 rounded-2xl text-white focus:outline-none focus:ring-2 focus:ring-primary appearance-none"
-                  >
-                    <option value="monitor">Monitor / Operador</option>
-                    <option value="admin">Administrador Geral</option>
-                    <option value="coordinador">Coordinador de Estudio</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-4">
-                <button 
-                  type="submit" 
-                  disabled={submitting}
-                  className="w-full py-5 bg-primary text-white font-black rounded-2xl shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all disabled:opacity-50"
-                >
-                  {submitting ? "Creando Integrante..." : "Confirmar y Dar de Alta"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      
+      <p className="text-[10px] text-center text-text-muted">
+        Los cambios en esta base de datos afectan directamente a la operatividad de Estudios WooW (Proyecto 7288e).
+      </p>
     </div>
   );
 }

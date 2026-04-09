@@ -62,11 +62,47 @@ export async function getFileDetails(fileId: string) {
     const response = await drive.files.get({
       fileId: fileId,
       fields: 'id, name, mimeType, webViewLink, thumbnailLink, size',
-      supportsAllDrives: true, // Siempre es bueno incluirlo por si se usa Shared Drive
+      supportsAllDrives: true,
     });
     return response.data;
   } catch (error) {
     console.error('Error al obtener detalles del archivo:', error);
+    throw error;
+  }
+}
+
+/**
+ * Obtiene el contenido de un archivo
+ */
+export async function getFileContent(fileId: string) {
+  try {
+    const drive = await getDriveClient();
+    const response = await drive.files.get({
+      fileId: fileId,
+      alt: 'media',
+      supportsAllDrives: true,
+    }, { responseType: 'stream' });
+
+    return new Promise((resolve, reject) => {
+      let data = '';
+      response.data
+        .on('data', chunk => {
+          data += chunk;
+        })
+        .on('end', () => {
+          try {
+            // Intentar parsear si es JSON
+            resolve(JSON.parse(data));
+          } catch (e) {
+            resolve(data);
+          }
+        })
+        .on('error', err => {
+          reject(err);
+        });
+    });
+  } catch (error) {
+    console.error('Error al descargar archivo de Google Drive:', error);
     throw error;
   }
 }

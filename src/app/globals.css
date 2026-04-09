@@ -3,10 +3,12 @@
 @theme {
   --color-primary: #8F1F4E;
   --color-primary-light: #B23A6A;
-  --color-background-dark: #1A1418;
-  --color-panel-dark: #281C22;
-  --color-sidebar-dark: #120C0F;
+  --color-background-dark: var(--background-page);
+  --color-panel-dark: var(--panel-bg);
+  --color-sidebar-dark: var(--sidebar-bg);
   --color-accent-gold: #D4AF37;
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
 
   --font-display: "Poppins", sans-serif;
   --font-sans: "Inter", sans-serif;
@@ -17,15 +19,34 @@
   --radius-2xl: 2rem;
 }
 
+:root {
+  --background-page: #ffffff;
+  --panel-bg: #f8fafc;
+  --sidebar-bg: #f1f5f9;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border-subtle: rgba(15, 23, 42, 0.05);
+}
+
+.dark {
+  --background-page: #1A1418;
+  --panel-bg: #281C22;
+  --sidebar-bg: #120C0F;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --border-subtle: rgba(255, 255, 255, 0.05);
+}
+
 /* Permitir que la clase .dark active los estilos 'dark:' en Tailwind v4 */
 @variant dark (&:where(.dark, .dark *));
 
 @layer base {
   body {
-    background-color: var(--color-background-dark);
-    color: #f1f5f9; /* slate-100 */
+    background-color: var(--background-page);
+    color: var(--text-main);
     font-family: var(--font-sans);
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 @layer utilities {
