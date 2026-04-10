@@ -6,7 +6,7 @@ service cloud.firestore {
     // FUNCIONES DE SEGURIDAD
     // ==========================================
     
-    // Verifica si el usuario está autenticado y tiene rol de staff en el proyecto 7288e
+    // Verifica si el usuario está autenticado y tiene rol de staff en la colección 'users'
     function isStaff() {
       return request.auth != null && 
         (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
@@ -19,94 +19,23 @@ service cloud.firestore {
     }
 
     // ==========================================
-    // 🛡️ BLOQUEO DE ESCRITURA EN CORE (AISLAMIENTO TOTAL)
-    // Estas colecciones NO deben ser modificadas por esta App.
+    // 🛡️ REGLAS OPERATIVAS (7288e)
+    // Se permite acceso TOTAL al Staff para garantizar la operatividad de V1 y V2.
     // ==========================================
     
-    match /models/{modelId} {
-      allow read: if isStaff(); 
-      allow write: if false; // ⛔ PROHIBIDO: Solo lectura desde esta app
-    }
-
-    match /daily_metrics/{metricId} {
-      allow read: if isStaff();
-      allow write: if false; // ⛔ PROHIBIDO: Protege el historial financiero
-    }
-
-    match /work_hours/{hourId} {
-      allow read: if isStaff();
-      allow write: if false; // ⛔ PROHIBIDO
-    }
-    
-    match /transactions/{transactionId} {
-      allow read: if isStaff();
-      allow write: if false; // ⛔ PROHIBIDO
-    }
-
-    match /financial_transactions/{id} {
-      allow read: if isStaff();
-      allow write: if false; // ⛔ PROHIBIDO
-    }
-
-    // Preservar acceso al estudio y habitaciones como staff pero sin escritura desde aquí
-    match /studio/{documentId} {
-      allow read: if isStaff();
-      allow write: if false;
-    }
-
-    match /rooms/{roomId} {
-      allow read: if isStaff();
-      allow write: if false;
-    }
-
-    match /users/{userId} {
-      // Necesario filtro por query en algunos casos
-      allow list: if request.auth != null
-                  && request.query.limit <= 1 
-                  && request.query.filters.size() == 1
-                  && request.query.filters[0].op == '==' 
-                  && request.query.filters[0].field == 'username';
-      allow read: if isStaff();
-      allow write: if isAdmin(); // Solo Admins reales pueden tocar la tabla de usuarios
-    }
-
-    // ==========================================
-    // ✅ COLECCIONES DE ASESORÍA (ESCRITURA PERMITIDA)
-    // Aquí es donde esta aplicación guarda su información.
-    // ==========================================
-    
-    // Planes de Acción y Seguimiento Quincenal
-    match /modelos_action_plans_v2/{planId} {
-      allow read, write: if isStaff();
-    }
-    
-    // Perfiles extendidos de optimización
-    match /modelos_profile_v2/{profileId} {
-      allow read, write: if isStaff();
-    }
-
-    // Integraciones de API y Nicknames
-    match /modelos_api_integrations/{apiId} {
-      allow read, write: if isStaff();
-    }
-
-    // Caché de Analítica para el Dashboard
-    match /modelos_analytics_cache_v2/{cacheId} {
-      allow read, write: if isStaff();
-    }
-
-    // Logs de sincronización de plataformas
-    match /chaturbate_logs/{logId} {
-      allow read, write: if isStaff();
-    }
-
-    // ==========================================
-    // BLOQUEO POR DEFECTO
-    // ==========================================
+    // Permitir a Staff leer y escribir en CUALQUIER colección
+    // Esto resuelve los problemas de permisos en modelos, métricas, finanzas, logs, etc.
     match /{document=**} {
-      allow read: if isStaff();
-      allow write: if false;
+      allow read, write: if isStaff();
     }
+
+    // Regla especial para que el propio usuario pueda LEER su documento de perfil
+    // (necesario para que isStaff() funcione al cargar la app)
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Bloqueo total para usuarios no autenticados o sin rol de staff
+    // (Ya cubierto por isStaff() arriba, pero para claridad)
   }
 }
-

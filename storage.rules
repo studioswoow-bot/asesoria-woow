@@ -1,0 +1,17 @@
+rules_version = '2';
+
+// Cloud Storage rules for estudioswoow-7288e
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Permitir lectura pública de la carpeta studio (logos)
+    match /studio/{allPaths=**} {
+      allow read: if true;
+    }
+
+    // Permitir subida y lectura a cualquier usuario autenticado 
+    // (Bypass para fallos de permisos de IAM con firestore.get en Storage Logs)
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

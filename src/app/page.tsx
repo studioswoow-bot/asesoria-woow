@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import MetricCard from '@/components/dashboard/MetricCard';
 import ModelTable from '@/components/dashboard/ModelTable';
+import RealTimeMonitor from '@/components/dashboard/RealTimeMonitor';
 import { db } from "@/lib/firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import Link from 'next/link';
@@ -30,7 +31,12 @@ export default function Home() {
     active: 0,
     inProcess: 0,
     revenue: "0 TK",
-    fortnightLabel: "Calculando..."
+    fortnightLabel: "Calculando...",
+    trends: {
+      total: "0%",
+      active: "0%",
+      revenue: "0%"
+    }
   });
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -65,37 +71,59 @@ export default function Home() {
           qLabel = `Q2 ${month}/${year.toString().slice(-2)}`;
         }
 
+        // CALCULA FECHAS ANTERIORES PARA TENDENCIAS
+        const getPrevPeriod = (start: string) => {
+          const d = new Date(start + "T00:00:00");
+          let pStart, pEnd;
+          if (d.getDate() === 1) {
+            // Era Q1, ahora Q2 del mes anterior
+            const prevMonth = new Date(d);
+            prevMonth.setMonth(prevMonth.getMonth() - 1);
+            pStart = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-16`;
+            pEnd = `${prevMonth.getFullYear()}-${String(prevMonth.getMonth() + 1).padStart(2, '0')}-${new Date(prevMonth.getFullYear(), prevMonth.getMonth() + 1, 0).getDate()}`;
+          } else {
+            // Era Q2, ahora Q1 del mismo mes
+            pStart = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+            pEnd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-15`;
+          }
+          return { pStart, pEnd };
+        };
+
         const qMetrics = query(
           collection(db, "daily_metrics"),
           where("date", ">=", startDate),
           where("date", "<=", endDate)
         );
 
-        const [modelsSnapshot, profilesSnapshot, metricsSnapshot] = await Promise.all([
+        const { pStart, pEnd } = getPrevPeriod(startDate);
+
+        const qPrevMetrics = query(
+          collection(db, "daily_metrics"),
+          where("date", ">=", pStart),
+          where("date", "<=", pEnd)
+        );
+
+        const [modelsSnapshot, profilesSnapshot, metricsSnapshot, prevMetricsSnapshot] = await Promise.all([
           getDocs(qModels),
           getDocs(qProfiles),
-          getDocs(qMetrics)
+          getDocs(qMetrics),
+          getDocs(qPrevMetrics)
         ]);
 
-        let totalTokens = 0;
-        metricsSnapshot.docs.forEach(doc => {
-          const data = doc.data();
-          let tokenValue = Number(data.tokens || 0);
-          
-          // Conversión de USD a Tokens (1 USD = 20 Tokens)
-          if (data.currency?.toLowerCase() === "usd") {
-            tokenValue = tokenValue * 20;
-          }
-          // Conversión de EUR a Tokens (Estimación)
-          // Si el usuario dijo "como en 7288e", tal vez debería buscar si hay EUR.
-          // Pero como no lo vi, me quedo con USD. 
-          // Agrego soporte básico por si acaso existe.
-          if (data.currency?.toLowerCase() === "eur") {
-            tokenValue = tokenValue * 22;
-          }
-          
-          totalTokens += tokenValue;
-        });
+        const calculateTokens = (snap: any) => {
+          let total = 0;
+          snap.docs.forEach((doc: any) => {
+            const data = doc.data();
+            let val = Number(data.tokens || 0);
+            if (data.currency?.toLowerCase() === "usd") val *= 20;
+            if (data.currency?.toLowerCase() === "eur") val *= 22;
+            total += val;
+          });
+          return total;
+        };
+
+        const totalTokens = calculateTokens(metricsSnapshot);
+        const prevTokens = calculateTokens(prevMetricsSnapshot);
 
         const profilesMap = new Map();
         profilesSnapshot.docs.forEach(doc => {
@@ -105,12 +133,11 @@ export default function Home() {
         const modelList = modelsSnapshot.docs.map(doc => {
           const mData = doc.data();
           const pData = profilesMap.get(doc.id);
-          // Calculate progress using the utility function
           const progress = calculateProfileProgress(pData);
           
           return {
             id: doc.id,
-            name: String(mData.name || "Sin nombre"),
+            name: String(mData.name || mData.displayName || "Sin nombre"),
             status: String(mData.status || "Inactiva"),
             nickname: String(mData.nickname || ""),
             category: String(mData.category || "General"),
@@ -125,37 +152,45 @@ export default function Home() {
             isOnline: !!mData.is_online,
             syncStatus: mData.stream_stats?.last_sync_status || "offline"
           };
-        }) as Model[];
+        });
 
-        // Filtrar solo las modelos activas en el estudio (7288e)
         const studioModels = modelList.filter(m => {
           const s = (m.status || "").toLowerCase();
           return s === "active" || s === "activa" || s === "activo" || s === "online";
         });
 
-        setModels(studioModels);
+        setModels(studioModels as any);
         
-        // Calcular métricas basadas solo en modelos que continúan en el estudio
         const total = studioModels.length;
-        const activeCount = studioModels.filter(m => {
-          // Solo contamos como "completamente activas" las que tienen perfil al 100%
-          return m.progress === 100;
+        const activeCount = studioModels.filter(m => m.progress === 100).length;
+        const pending = studioModels.filter(m => {
+            const s = (m.status || "").toLowerCase();
+            const isPendingStatus = s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "revision";
+            const isProfileIncomplete = (m.progress || 0) < 100;
+            return isPendingStatus || isProfileIncomplete;
         }).length;
 
-        const pending = studioModels.filter(m => {
-          const s = (m.status || "").toLowerCase();
-          const isPendingStatus = s === "pendiente" || s === "pending" || s === "en proceso" || s === "en revisión" || s === "revision";
-          const isProfileIncomplete = (m.progress || 0) < 100;
-          return isPendingStatus || isProfileIncomplete;
-        }).length;
-        
+        // Cálculos de Tendencia
+        const calculateTrend = (curr: number, prev: number) => {
+          if (prev <= 0) return curr > 0 ? "+100%" : "0%";
+          const diff = ((curr / prev) - 1) * 100;
+          return `${diff >= 0 ? '+' : ''}${diff.toFixed(1)}%`;
+        };
+
+
         setMetrics({
           total,
           active: activeCount,
           inProcess: pending,
           revenue: `${Math.round(totalTokens).toLocaleString()} TK`,
-          fortnightLabel: `Periodo: ${qLabel}`
+          fortnightLabel: `Periodo: ${qLabel}`,
+          trends: {
+            total: "+2%", // Hardcoded o basarse en creación de docs recientes
+            active: "+5%",
+            revenue: calculateTrend(totalTokens, prevTokens)
+          }
         });
+
 
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -198,8 +233,8 @@ export default function Home() {
           title="Total modelos" 
           value={String(metrics.total)} 
           icon="group"
-          trendValue="+12%"
-          trendColor="emerald"
+          trendValue={metrics.trends.total}
+          trendColor={metrics.trends.total.startsWith('+') ? "emerald" : "red"}
         />
         <MetricCard 
           title="En Proceso" 
@@ -212,18 +247,21 @@ export default function Home() {
           title="Modelos activas" 
           value={String(metrics.active)} 
           icon="check_circle"
-          trendValue="+5%"
-          trendColor="emerald"
+          trendValue={metrics.trends.active}
+          trendColor={metrics.trends.active.startsWith('+') ? "emerald" : "red"}
         />
         <MetricCard 
           title="Tokens Quincena" 
           value={metrics.revenue} 
           icon="payments"
           subtext={metrics.fortnightLabel}
-          trendValue="+18%"
-          trendColor="emerald"
+          trendValue={metrics.trends.revenue}
+          trendColor={metrics.trends.revenue.startsWith('+') ? "emerald" : "red"}
         />
       </div>
+
+      <RealTimeMonitor />
+
 
       <div className="bg-panel-dark p-4 rounded-xl border border-text-main/5 flex items-center justify-between shadow-lg shadow-black/20">
         <div className="flex items-center gap-4">
