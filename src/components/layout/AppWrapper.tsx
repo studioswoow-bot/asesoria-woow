@@ -69,7 +69,7 @@ export default function AppWrapper({ children }: { children: React.ReactNode }) 
                     {!isLoginPage && (
                       <footer className="mt-12 pb-8 text-center border-t border-text-main/5 pt-8">
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-text-muted/40">
-                          Propiedad de Marca Registrada WooW Estudios 2026
+                          Propiedad WooW Estudios 2026. Marca registrada
                         </p>
                       </footer>
                     )}
