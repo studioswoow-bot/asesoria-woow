@@ -17,17 +17,34 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    // FIX #8: Redirigir al dashboard si ya está autenticado y navega al login
-    if (user && pathname === "/login") {
-      router.replace("/");
-      return;
-    }
-
     // Redirigir al login si no está autenticado y no está en /login
     if (!user && pathname !== "/login") {
       router.replace("/login");
+      return;
     }
-  }, [user, loading, pathname, router]);
+
+    // FIX #8: Redirigir al dashboard si ya está autenticado y navega al login
+    if (user && pathname === "/login") {
+      const role = (user as any).role || profile?.role;
+      if (role === 'model' && profile?.modelId) {
+        router.replace(`/models/profile?id=${profile.modelId}`);
+      } else {
+        router.replace("/");
+      }
+      return;
+    }
+
+    // REDIRECCIÓN ESPECITICA PARA MODELOS:
+    // Si una modelo intenta entrar al dashboard general o páginas administrativas, mandarla a su perfil
+    if (profile?.role === 'model' && profile.modelId) {
+      const allowedPaths = ['/models/profile', '/models/analytics', '/action-plans', '/login'];
+      const isAllowed = allowedPaths.some(path => pathname.startsWith(path));
+      
+      if (!isAllowed || pathname === '/') {
+        router.replace(`/models/profile?id=${profile.modelId}`);
+      }
+    }
+  }, [user, profile, loading, pathname, router]);
 
   if (loading) {
     return (

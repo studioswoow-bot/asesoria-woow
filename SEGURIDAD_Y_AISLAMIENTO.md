@@ -4,14 +4,17 @@ Este documento establece las reglas estrictas para el desarrollo y despliegue de
 
 ## 1. Reglas de Base de Datos (Firestore)
 
-### Prohibición de Escritura
-Se prohíbe terminantemente realizar operaciones de escritura (`set`, `update`, `delete`, `addDoc`) sobre las siguientes colecciones pertenecientes a la aplicación original:
+### 1. Lectura y Escritura de Colecciones Críticas (V1)
+Se permite al personal de **Staff** (Administradores y Monitores) realizar operaciones de lectura y escritura sobre las colecciones críticas de la App V1 (**7288e**) para garantizar la operatividad del sistema original:
 - `models`
-- `daily_metrics`
+- `users`
+- `daily_metrics` (Escritura reservada preferiblemente para procesos automatizados)
+
+**Regla de Oro:** Aunque la escritura está técnicamente habilitada para el Staff, la aplicación de **Asesoría** debe priorizar el guardado de datos extendidos en las colecciones **V2** para evitar colisiones con la lógica de la App V1.
 
 ### Lógica de Conectividad
 - La unión entre aplicaciones se realizará exclusivamente mediante el campo **`nickname`** (Apodo) de la modelo.
-- Toda consulta a la aplicación original debe ser **estrictamente de solo lectura (Read-Only)**.
+- Las consultas desde la lógica automatizada de la App de Asesoría deben tratar los datos de la App V1 como fuente de verdad, priorizando el aislamiento pero permitiendo la edición manual operativa por parte del Staff cuando sea necesario.
 
 ### Nuevas Colecciones Exclusivas
 Todas las funcionalidades de esta nueva aplicación deben persistirse en colecciones nuevas para evitar colisiones de datos:

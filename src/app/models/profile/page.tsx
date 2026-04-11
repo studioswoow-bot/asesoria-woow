@@ -8,6 +8,7 @@ import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from "
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { calculateWooWRating, WooWRatingResult } from "@/lib/ratingAlgorithm";
 import { ActionPlan } from '@/context/ActionPlanContext';
+import { useAuth } from '@/context/AuthContext';
 
 interface ModelData {
   id: string;
@@ -25,9 +26,12 @@ interface ModelData {
 function ProfileContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
+  const { profile } = useAuth();
   const [model, setModel] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [woowRating, setWoowRating] = useState<WooWRatingResult | null>(null);
+
+  const isModel = profile?.role === 'model';
 
   useEffect(() => {
     async function fetchModel() {
@@ -139,15 +143,17 @@ function ProfileContent() {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Premium Header */}
       <div className="relative overflow-hidden bg-panel-dark rounded-[2.5rem] border border-text-main/10 p-10 shadow-2xl transition-colors duration-300">
-        <div className="absolute top-0 right-0 p-8 z-[100]">
-            <Link 
-              href={`/models/edit?id=${id}`} 
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 backdrop-blur-md cursor-pointer z-[100]"
-            >
-                <span className="material-symbols-outlined text-sm">edit_note</span>
-                Completar Perfil
-            </Link>
-        </div>
+        {!isModel && (
+          <div className="absolute top-0 right-0 p-8 z-[100]">
+              <Link 
+                href={`/models/edit?id=${id}`} 
+                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 backdrop-blur-md cursor-pointer z-[100]"
+              >
+                  <span className="material-symbols-outlined text-sm">edit_note</span>
+                  Completar Perfil
+              </Link>
+          </div>
+        )}
 
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
           <div className="relative">
@@ -332,9 +338,11 @@ function ProfileContent() {
                             </div>
                          </div>
                      </div>
-                     <Link href={`/action-plans?modelId=${id}`} className="block text-center py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.05] shadow-lg shadow-primary/20">
-                         Gestionar Planes
-                     </Link>
+                     {!isModel && (
+                       <Link href={`/action-plans?modelId=${id}`} className="block text-center py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-[1.05] shadow-lg shadow-primary/20">
+                           Gestionar Planes
+                       </Link>
+                     )}
                  </div>
               </div>
           </div>

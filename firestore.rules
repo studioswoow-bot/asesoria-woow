@@ -6,36 +6,82 @@ service cloud.firestore {
     // FUNCIONES DE SEGURIDAD
     // ==========================================
     
-    // Verifica si el usuario está autenticado y tiene rol de staff en la colección 'users'
+    // Obtiene los datos del usuario actual una sola vez para eficiencia
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Verifica si el usuario es Staff (Admin o Monitor)
     function isStaff() {
-      return request.auth != null && 
-        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' || 
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'monitor');
+      let role = getUserData().role;
+      return request.auth != null && (role == 'admin' || role == 'monitor');
     }
 
-    function isAdmin() {
-      return request.auth != null && 
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Verifica si el usuario es una Modelo
+    function isModel() {
+      return request.auth != null && getUserData().role == 'model';
+    }
+
+    // Obtiene el ID de modelo asociado al usuario actual
+    function currentUserModelId() {
+      return getUserData().modelId;
+    }
+
+    // Verifica si el usuario es dueño de los datos de una modelo específica
+    function isOwner(modelId) {
+      return isModel() && currentUserModelId() == modelId;
     }
 
     // ==========================================
-    // 🛡️ REGLAS OPERATIVAS (7288e)
-    // Se permite acceso TOTAL al Staff para garantizar la operatividad de V1 y V2.
+    // 🛡️ REGLAS DE ACCESO PARA MODELOS
+    // Permite que las modelos vean SOLO su propia información.
     // ==========================================
+
+    // Colección principal de Modelos (V1)
+    match /models/{modelId} {
+      allow read: if isStaff() || isOwner(modelId);
+      allow write: if isStaff(); // Solo Staff puede modificar la ficha técnica base
+    }
+
+    // Colecciones de la App de Asesoría (V2)
+    match /modelos_profile_v2/{modelId} {
+      allow read: if isStaff() || isOwner(modelId);
+      allow write: if isStaff();
+    }
     
-    // Permitir a Staff leer y escribir en CUALQUIER colección
-    // Esto resuelve los problemas de permisos en modelos, métricas, finanzas, logs, etc.
+    match /modelos_profile_history_v2/{historyId} {
+      // Nota: El ID aquí suele ser timestamp#modelId o similar, verificamos el campo de datos
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+    }
+
+    match /modelos_analytics_cache_v2/{modelId} {
+      allow read: if isStaff() || isOwner(modelId);
+    }
+
+    // Métricas y Horas de Trabajo
+    match /daily_metrics/{metricId} {
+      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    match /work_hours/{workId} {
+      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    // ==========================================
+    // 🛡️ REGLAS GENERALES Y STAFF
+    // ==========================================
+
+    // Los usuarios pueden leer su propio documento en 'users' para que la app cargue
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if isStaff();
+    }
+
+    // Permitir acceso total al Staff para el resto de la base de datos (Operatividad)
     match /{document=**} {
       allow read, write: if isStaff();
     }
-
-    // Regla especial para que el propio usuario pueda LEER su documento de perfil
-    // (necesario para que isStaff() funcione al cargar la app)
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // Bloqueo total para usuarios no autenticados o sin rol de staff
-    // (Ya cubierto por isStaff() arriba, pero para claridad)
   }
 }

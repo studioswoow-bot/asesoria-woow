@@ -1,92 +1,226 @@
 {
   "scannedFiles": [
     {
-      "name": "Sara_Love_1_2026-03-01_to_2026-03-15.csv",
+      "name": "natalia_kiss01_2026-01-01_to_2026-01-15.csv",
       "headers": [
-        "Usuarios",
         "Fecha",
-        "Tipo",
-        "Tokens"
+        "Acci�n",
+        "Usuario",
+        "Fichas",
+        "Saldo"
       ],
-      "rowCount": 714,
+      "rowCount": 663,
       "sampleRows": [
         {
-          "Usuarios": "WooW_Estudios",
-          "Fecha": "15 de marzo de 2026 19:11",
-          "Tipo": "Transferencia a estudio",
-          "Tokens": "-2 632"
+          "Fecha": "15 ene 2026, 17:21",
+          "Acci�n": "Propina de",
+          "Usuario": "�skippy3856140",
+          "Fichas": 50,
+          "Saldo": 362
         },
         {
-          "Usuarios": "gk9494",
-          "Fecha": "14 de marzo de 2026 05:20",
-          "Tipo": "Privado Exclusivo",
-          "Tokens": 16
+          "Fecha": "15 ene 2026, 17:09",
+          "Acci�n": "Propina de",
+          "Usuario": "�skippy3856140",
+          "Fichas": 100,
+          "Saldo": 312
         },
         {
-          "Usuarios": "gk9494",
-          "Fecha": "14 de marzo de 2026 05:19",
-          "Tipo": "Privado Exclusivo",
-          "Tokens": 16
+          "Fecha": "15 ene 2026, 17:02",
+          "Acci�n": "Propina de",
+          "Usuario": "�nikmaverick881",
+          "Fichas": 1,
+          "Saldo": 212
         }
       ]
     },
     {
-      "name": "Sara_Love_1_2026-03-16_to_2026-03-31.csv",
+      "name": "natalia_kiss01_2026-01-16_to_2026-01-31.csv",
       "headers": [
-        "Usuarios",
         "Fecha",
-        "Tipo",
-        "Tokens"
+        "Acci�n",
+        "Usuario",
+        "Fichas",
+        "Saldo"
       ],
-      "rowCount": 443,
+      "rowCount": 1248,
       "sampleRows": [
         {
-          "Usuarios": "Yarsgk",
-          "Fecha": "31 de marzo de 2026 05:55",
-          "Tipo": "Propina pública",
-          "Tokens": 1
+          "Fecha": "31 ene 2026, 19:14",
+          "Acci�n": "Propina de",
+          "Usuario": "�damnat22",
+          "Fichas": 5,
+          "Saldo": 143
         },
         {
-          "Usuarios": "Yarsgk",
-          "Fecha": "31 de marzo de 2026 05:54",
-          "Tipo": "Propina pública",
-          "Tokens": 1
+          "Fecha": "31 ene 2026, 19:13",
+          "Acci�n": "Propina de",
+          "Usuario": "�damnat22",
+          "Fichas": 5,
+          "Saldo": 138
         },
         {
-          "Usuarios": "Yarsgk",
-          "Fecha": "31 de marzo de 2026 05:54",
-          "Tipo": "Propina pública",
-          "Tokens": 1
+          "Fecha": "31 ene 2026, 19:09",
+          "Acci�n": "Propina de",
+          "Usuario": "�damnat22",
+          "Fichas": 5,
+          "Saldo": 133
+        }
+      ]
+    },
+    {
+      "name": "natalia_kiss01_2026-02-01_to_2026-02-15.csv",
+      "headers": [
+        "Fecha",
+        "Acci�n",
+        "Usuario",
+        "Fichas",
+        "Saldo"
+      ],
+      "rowCount": 1311,
+      "sampleRows": [
+        {
+          "Fecha": "2026-02-15T02:30:00.000Z",
+          "Acci�n": "Propina de",
+          "Usuario": "�darylgfunk",
+          "Fichas": 1,
+          "Saldo": 107
+        },
+        {
+          "Fecha": "2026-02-15T02:29:00.000Z",
+          "Acci�n": "Propina de",
+          "Usuario": "�darylgfunk",
+          "Fichas": 1,
+          "Saldo": 106
+        },
+        {
+          "Fecha": "2026-02-15T02:28:00.000Z",
+          "Acci�n": "Propina de",
+          "Usuario": "�darylgfunk",
+          "Fichas": 1,
+          "Saldo": 105
+        }
+      ]
+    },
+    {
+      "name": "natalia_kiss01_2026-02-16_to_2026-02-28.csv",
+      "headers": [
+        "Fecha",
+        "Acci�n",
+        "Usuario",
+        "Fichas",
+        "Saldo"
+      ],
+      "rowCount": 627,
+      "sampleRows": [
+        {
+          "Fecha": "2026-02-28T01:24:00.000Z",
+          "Acci�n": "Propina de",
+          "Usuario": "�busblkm",
+          "Fichas": 5,
+          "Saldo": 205
+        },
+        {
+          "Fecha": "2026-02-27T23:27:00.000Z",
+          "Acci�n": "Emisi�n privada",
+          "Usuario": "�zrl2023",
+          "Fichas": 3,
+          "Saldo": 200
+        },
+        {
+          "Fecha": "2026-02-27T23:27:00.000Z",
+          "Acci�n": "Emisi�n privada",
+          "Usuario": "�zrl2023",
+          "Fichas": 3,
+          "Saldo": 197
+        }
+      ]
+    },
+    {
+      "name": "natalia_kiss01_2026-03-01_to_2026-03-15.csv",
+      "headers": [
+        "Fecha",
+        "Acción",
+        "Usuario",
+        "Fichas",
+        "Saldo"
+      ],
+      "rowCount": 1210,
+      "sampleRows": [
+        {
+          "Fecha": "2026-03-16T03:37:00.000Z",
+          "Acción": "Envío de propina",
+          "Usuario": " woow_studies",
+          "Fichas": -88,
+          "Saldo": 0
+        },
+        {
+          "Fecha": "2026-03-15T17:31:00.000Z",
+          "Acción": "Propina de",
+          "Usuario": " justin415339",
+          "Fichas": 1,
+          "Saldo": 88
+        },
+        {
+          "Fecha": "2026-03-15T17:31:00.000Z",
+          "Acción": "Propina de",
+          "Usuario": " justin415339",
+          "Fichas": 1,
+          "Saldo": 87
+        }
+      ]
+    },
+    {
+      "name": "natalia_kiss01_2026-03-16_to_2026-03-31.csv",
+      "headers": [
+        "Fecha",
+        "Acción",
+        "Usuario",
+        "Fichas",
+        "Saldo"
+      ],
+      "rowCount": 1030,
+      "sampleRows": [
+        {
+          "Fecha": "2026-04-01T03:10:00.000Z",
+          "Acción": "Envío de propina",
+          "Usuario": " woow_studies",
+          "Fichas": -636,
+          "Saldo": 0
+        },
+        {
+          "Fecha": "2026-03-31T21:45:00.000Z",
+          "Acción": "Emisión privada",
+          "Usuario": " thomashard727626",
+          "Fichas": 3,
+          "Saldo": 636
+        },
+        {
+          "Fecha": "2026-03-31T21:45:00.000Z",
+          "Acción": "Emisión privada",
+          "Usuario": " thomashard727626",
+          "Fichas": 3,
+          "Saldo": 633
         }
       ]
     }
   ],
   "actionTypes": [
-    "privado exclusivo",
-    "propina publica",
-    "show privado",
-    "compra de foto",
-    "propina de show privado",
-    "privado exclusivo-20%",
-    "propina privada",
-    "show privado-20%",
-    "modo espia en show privado",
-    "propina anonima",
-    "animacion privada",
-    "extension: wheel of fortune",
-    "extension: reactions",
-    "propina anonima: objetivo epico",
-    "propina de agradecimiento por el show privado"
+    "",
+    "propina de",
+    "emision privada",
+    "emision espia",
+    "envio de propina"
   ],
-  "period": "2026-03-01_to_2026-03-31",
-  "startStr": "2026-03-01",
-  "endStr": "2026-03-31",
-  "periodStartTime": 1772341200000,
-  "periodEndTime": 1775019599999,
+  "period": "2026-01-01_to_2026-04-09",
+  "startStr": "2026-01-01",
+  "endStr": "2026-04-09",
+  "periodStartTime": 1767243600000,
+  "periodEndTime": 1775797199999,
   "stats": {
-    "totalTokens": 10400,
-    "tipTokens": 2792,
-    "privateTokens": 7608,
+    "totalTokens": 26587,
+    "tipTokens": 22512,
+    "privateTokens": 4075,
     "fileFoundAndParsed": true
   }
 }
