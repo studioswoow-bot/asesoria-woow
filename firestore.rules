@@ -54,8 +54,8 @@ service cloud.firestore {
       allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
     }
 
-    match /modelos_analytics_cache_v2/{modelId} {
-      allow read: if isStaff() || isOwner(modelId);
+    match /modelos_analytics_cache_v2/{cacheId} {
+      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
     }
 
     // Métricas y Horas de Trabajo
@@ -66,6 +66,11 @@ service cloud.firestore {
 
     match /work_hours/{workId} {
       allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    match /modelos_action_plans_v2/{planId} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
       allow write: if isStaff();
     }
 

@@ -224,6 +224,25 @@ export async function GET(req: NextRequest) {
       const businessDays = Math.max(0, safetyLimit - sundaysCount - festivosCount);
       const expectedHoursMensual = businessDays * 6; // 6 horas obligatorias por día hábil
 
+      // FALLBACK HORAS ONLINE DE CACHE (Drive/Chaturbate) SI NO HAY REGISTRO EN WORK_HOURS
+      if (totalHours === 0) {
+        try {
+          const scCacheDoc = await adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${startDate}_to_${endDate}_Stripchat`).get();
+          if (scCacheDoc.exists && scCacheDoc.data()?.platform_total_hours > 0) {
+              totalHours = scCacheDoc.data()?.platform_total_hours;
+              console.log(`[MetricsAPI] Fallback de horas usando caché Stripchat: ${totalHours} hrs.`);
+          } else {
+              const cbCacheDoc = await adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${startDate}_to_${endDate}_Chaturbate`).get();
+              if (cbCacheDoc.exists && cbCacheDoc.data()?.platform_total_hours > 0) {
+                  totalHours = cbCacheDoc.data()?.platform_total_hours;
+                  console.log(`[MetricsAPI] Fallback de horas usando caché Chaturbate: ${totalHours} hrs.`);
+              }
+          }
+        } catch (e) {
+          console.error("[MetricsAPI] Error buscando fallback de horas en caché:", e);
+        }
+      }
+
       const finalZscore = daysWithWork > 0 ? (avgZscore / daysWithWork) : 0;
       const finalTph = totalHours > 0 ? (totalTokens / totalHours) : 0;
       const finalIcj = expectedHoursMensual > 0 ? (totalHours / expectedHoursMensual) * 100 : 0;

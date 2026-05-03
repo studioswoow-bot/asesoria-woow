@@ -122,8 +122,8 @@ function AnalyticsContent() {
 
   const getCombinedMetrics = () => {
     if (!cbMetrics && !scMetrics) return null;
-    const cb = cbMetrics || {};
-    const sc = scMetrics || {};
+    const cb = cbMetrics || { total_tokens: 0, usd_earnings: 0, new_followers: 0, tph: 0, icr: 0, platform_total_hours: 0, history: [] };
+    const sc = scMetrics || { total_tokens: 0, usd_earnings: 0, new_followers: 0, tph: 0, icr: 0, platform_total_hours: 0, history: [] };
     
     const tippersMap: any = {};
     const tippersDetailsMap: any = {};
@@ -251,8 +251,19 @@ function AnalyticsContent() {
         }
     }
 
+    const total_tokens = (cb.total_tokens||0) + (sc.total_tokens||0);
+    const platform_total_hours = (cb.platform_total_hours||0) + (sc.platform_total_hours||0);
+    const expectedHoursMensual = globalMetrics?.expectedHoursMensual || 120; // fallback if globalMetrics not ready
+    const tph = platform_total_hours > 0 ? total_tokens / platform_total_hours : 0;
+    const icj = expectedHoursMensual > 0 ? (platform_total_hours / expectedHoursMensual) * 100 : 0;
+    const icr = tph * (icj / 100);
+
     return {
-      total_tokens: (cb.total_tokens||0) + (sc.total_tokens||0),
+      total_tokens,
+      platform_total_hours,
+      tph: Number(tph.toFixed(2)),
+      icj: Number(icj.toFixed(1)),
+      icr: Number(icr.toFixed(2)),
       tip_tokens: (cb.tip_tokens||0) + (sc.tip_tokens||0),
       private_tokens: (cb.private_tokens||0) + (sc.private_tokens||0),
       income_concepts: {
@@ -589,12 +600,12 @@ function AnalyticsContent() {
         </div>
       )}
 
-      {activeTab === "Combined" && cbMetrics && scMetrics && (
+      {activeTab === "Combined" && (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl flex items-center justify-between">
              <div>
                 <p className="text-[10px] uppercase tracking-widest text-primary font-black mb-1">Aporte Chaturbate</p>
-                <h4 className="text-3xl font-black text-slate-900 dark:text-white">{cbMetrics.total_tokens?.toLocaleString()} TK</h4>
+                <h4 className="text-3xl font-black text-slate-900 dark:text-white">{cbMetrics?.total_tokens?.toLocaleString() || 0} TK</h4>
              </div>
              <div className="size-12 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
                 <span className="material-symbols-outlined font-bold">videocam</span>
@@ -603,7 +614,7 @@ function AnalyticsContent() {
           <div className="p-6 bg-rose-500/5 border border-rose-500/20 rounded-3xl flex items-center justify-between">
              <div>
                 <p className="text-[10px] uppercase tracking-widest text-rose-500 font-black mb-1">Aporte Stripchat</p>
-                <h4 className="text-3xl font-black text-slate-900 dark:text-white">{scMetrics.total_tokens?.toLocaleString()} TK</h4>
+                <h4 className="text-3xl font-black text-slate-900 dark:text-white">{scMetrics?.total_tokens?.toLocaleString() || 0} TK</h4>
              </div>
              <div className="size-12 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-500">
                 <span className="material-symbols-outlined font-bold">favorite</span>

@@ -10,7 +10,7 @@ import { ActionPlanProvider } from "@/context/ActionPlanContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 

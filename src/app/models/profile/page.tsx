@@ -86,7 +86,7 @@ function ProfileContent() {
              const previousPlan = planes.length > 1 ? planes[1] : undefined;
 
              let maxStudioICR = 0;
-             if (currentPlan) {
+             if (currentPlan && !isModel) {
                 // Para el Pilar A Relativo, necesitamos el máximo ICR del estudio en el mismo periodo
                 const qGlobal = query(
                   collection(db, "modelos_action_plans_v2"),

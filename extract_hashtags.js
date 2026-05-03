@@ -34,10 +34,18 @@ try {
         return { tag, description };
     });
 
+  // Manual extras
+  const manualHashtags = [
+    { tag: "#milk", description: "Fetichismo de leche / lactancia" },
+    { tag: "#cum", description: "Shows de semen / corridas" }
+  ];
+
   // Get unique by tag name
   const uniqueHashtags = [];
   const seen = new Set();
-  hashtags.forEach(h => {
+  
+  // Add manual ones first or last (adding first so they take precedence if description differs)
+  [...manualHashtags, ...hashtags].forEach(h => {
     if (!seen.has(h.tag)) {
         seen.add(h.tag);
         uniqueHashtags.push(h);
