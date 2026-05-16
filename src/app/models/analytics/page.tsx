@@ -12,9 +12,9 @@ import { useAuth } from "@/context/AuthContext";
 function AnalyticsContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const id = searchParams.get('id') || "";
+  const id = searchParams.get('id');
   
-  // Generar fechas rÃ¡pidas (Quincenas de los Ãºltimos 3 meses)
+  // Generar fechas rápidas (Quincenas de los últimos 3 meses)
   const generateQuickDates = () => {
     const dates = [];
     const today = new Date();
@@ -62,7 +62,7 @@ function AnalyticsContent() {
        return;
     }
 
-    // Cargar perfil bÃ¡sico
+    // Cargar perfil básico
     const fetchModel = async () => {
        const modelRef = doc(db, "models", id);
        const modelSnap = await getDoc(modelRef);
@@ -74,7 +74,7 @@ function AnalyticsContent() {
     fetchModel();
   }, [id]);
 
-  // Cargar mÃ©tricas globales de 7288e (MÃ©tricas base de facturaciÃ³n total de todas las plataformas)
+  // Cargar métricas globales de 7288e (Métricas base de facturación total de todas las plataformas)
   useEffect(() => {
     if (!id || !user || !period) return;
     const fetchGlobalMetrics = async () => {
@@ -101,7 +101,7 @@ function AnalyticsContent() {
     fetchGlobalMetrics();
   }, [id, period, user]);
 
-  // Suscribirse a los datos de la cachÃ© para el periodo seleccionado de ambas plataformas
+  // Suscribirse a los datos de la caché para el periodo seleccionado de ambas plataformas
   useEffect(() => {
     if (!id) return;
     const cacheDocCbId = `${id}_${period}_Chaturbate`;
@@ -323,12 +323,12 @@ function AnalyticsContent() {
         const data = await response.json();
         if (!data.success) {
            const detailedError = data.message || data.error || "Error desconocido";
-           alert(`Error de sincronizaciÃ³n (${platform}): ${detailedError}`);
+           alert(`Error de sincronización (${platform}): ${detailedError}`);
         }
       }
     } catch (error) {
       console.error("Sync error:", error);
-      alert("Hubo un error de conexiÃ³n al sincronizar.");
+      alert("Hubo un error de conexión al sincronizar.");
     } finally {
       setSyncing(false);
     }
@@ -379,7 +379,7 @@ function AnalyticsContent() {
               <span className="text-xs font-mono text-slate-400 bg-slate-100 dark:bg-primary/10 px-2 py-1 rounded-lg border border-slate-200 dark:border-primary/20 uppercase tracking-widest">{id?.substring(0, 8) || '...'}</span>
             </h1>
             <p className="text-slate-500 dark:text-slate-400 font-medium mt-1 uppercase text-xs tracking-tighter">
-              Datos ExtraÃ­dos mediante Archivos Drive
+              Datos Extraídos mediante Archivos Drive
             </p>
           </div>
         </div>
@@ -397,8 +397,8 @@ function AnalyticsContent() {
                 }}
                 className="bg-slate-100 dark:bg-sidebar-dark border border-slate-200 dark:border-white/10 text-sm font-bold rounded-xl px-4 py-2 outline-none text-slate-700 dark:text-slate-300"
              >
-                <option value="" disabled>SelecciÃ³n rÃ¡pida...</option>
-                {quickDates.map(p => <option key={p.value} value={p.label}>{p.label}</option>)}
+                <option value="" disabled>Selección rápida...</option>
+                {quickDates.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
              </select>
              
              <div className="flex items-center gap-2 bg-slate-100 dark:bg-sidebar-dark border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1">
@@ -431,9 +431,10 @@ function AnalyticsContent() {
              {syncing ? 'Procesando...' : 'Sincronizar desde Drive'}
            </button>
            <Link href="/models" className="px-6 py-2 rounded-xl text-xs font-black bg-slate-100 dark:bg-primary/5 text-slate-500 dark:text-slate-300 hover:bg-primary hover:text-white transition-all">
-             Volver a GalerÃ­a
+             Volver a Galería
            </Link>
         </div>
+      </div>
 
        {/* Tabs Navigator */}
        <div className="flex justify-center border-b border-slate-200 dark:border-white/10 mt-8">
@@ -455,35 +456,24 @@ function AnalyticsContent() {
           >
              <span className="material-symbols-outlined text-[18px]">donut_large</span> Combinado (Ambas)
           </button>
-          <button
-             onClick={() => setActiveTab("Comparison")}
-             className={`px-8 py-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${activeTab === "Comparison" ? "text-emerald-500 border-emerald-500" : "text-slate-500 border-transparent hover:text-emerald-500"}`}
-          >
-             <span className="material-symbols-outlined text-[18px]">compare_arrows</span> Comparativa
-          </button>
+           <button
+              onClick={() => setActiveTab("Comparison")}
+              className={`px-8 py-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${activeTab === "Comparison" ? "text-emerald-500 border-emerald-500" : "text-slate-500 border-transparent hover:text-emerald-500"}`}
+           >
+              <span className="material-symbols-outlined text-[18px]">compare_arrows</span> Comparativa
+           </button>
        </div>
-
-       {activeTab === "Comparison" ? (
-         <div className="mt-8">
-           <QuincenaComparison 
-             modelId={id} 
-             modelName={modelData?.name || "Modelo"} 
-             currentQuincena={{ start: startDate, end: endDate }}
-           />
-         </div>
-       ) : (
-       <>
 
 
       {loadingGlobal ? (
          <div className="py-20 text-center bg-white dark:bg-sidebar-dark/40 rounded-3xl border border-dashed border-slate-300 dark:border-white/10">
             <span className="material-symbols-outlined text-6xl text-slate-300 dark:text-slate-600 mb-4 inline-block animate-spin">refresh</span>
-            <h2 className="text-xl font-bold text-slate-700 dark:text-white mb-2">Calculando MÃ©tricas Globales...</h2>
+            <h2 className="text-xl font-bold text-slate-700 dark:text-white mb-2">Calculando Métricas Globales...</h2>
             <p className="text-slate-500">Extrayendo datos de 7288e para el periodo {period}</p>
          </div>
       ) : globalMetrics && (
       <>
-        {/* KPI Cards (MÃ©tricas Globales 7288e) */}
+        {/* KPI Cards (Métricas Globales 7288e) */}
         <div className="mb-8">
            <h2 className="text-lg font-black text-slate-800 dark:text-white mb-4 uppercase flex items-center gap-2">
              <span className="material-symbols-outlined text-primary">public</span>
@@ -521,7 +511,7 @@ function AnalyticsContent() {
                  </div>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">ICJ % Cumplimiento</p>
                  <h3 className="text-3xl font-black text-slate-900 dark:text-white relative z-10">{globalMetrics.icj}%</h3>
-                 <p className="text-[10px] font-bold text-slate-500 mt-2 uppercase relative z-10">ProyecciÃ³n sobre {globalMetrics.businessDays} d. hÃ¡biles</p>
+                 <p className="text-[10px] font-bold text-slate-500 mt-2 uppercase relative z-10">Proyección sobre {globalMetrics.businessDays} d. hábiles</p>
                </div>
 
                {/* ICR */}
@@ -535,9 +525,9 @@ function AnalyticsContent() {
                    </div>
                    <span className={`text-[10px] font-black text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg`}>Calidad</span>
                  </div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">ICR ConversiÃ³n</p>
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">ICR Conversión</p>
                  <h3 className="text-3xl font-black text-slate-900 dark:text-white relative z-10">{globalMetrics.icr}</h3>
-                 <p className="text-[10px] font-bold text-slate-500 mt-2 uppercase relative z-10">TPH Ã— Factor ICJ</p>
+                 <p className="text-[10px] font-bold text-slate-500 mt-2 uppercase relative z-10">TPH × Factor ICJ</p>
                </div>
 
                {/* Z-Score */}
@@ -549,7 +539,7 @@ function AnalyticsContent() {
                    <div className={`size-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner`}>
                      <span className="material-symbols-outlined text-[24px]">moving</span>
                    </div>
-                   <span className={`text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-1 rounded-lg`}>EstadÃ­stica</span>
+                   <span className={`text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-1 rounded-lg`}>Estadística</span>
                  </div>
                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 relative z-10">Z-Score</p>
                  <h3 className="text-3xl font-black text-slate-900 dark:text-white relative z-10">{globalMetrics.zscore}</h3>
@@ -560,10 +550,10 @@ function AnalyticsContent() {
       </>
       )}
 
-      {/* MÃ‰TRICAS SUPLEMENTARIAS DRIVE */}
+      {/* MÉTRICAS SUPLEMENTARIAS DRIVE */}
       <h2 className="text-lg font-black text-slate-800 dark:text-white mb-4 uppercase flex items-center gap-2 mt-12">
         <span className="material-symbols-outlined text-accent-gold">folder_managed</span>
-        MÃ©tricas Complementarias (Drive) - {activeTab}
+        Métricas Complementarias (Drive) - {activeTab}
       </h2>
 
       {metrics && (
@@ -576,9 +566,9 @@ function AnalyticsContent() {
                 </div>
                 {metrics.best_rank_details && (
                   <div className="mt-1 pt-2 border-t border-slate-100 dark:border-white/5 text-[9px] text-slate-500 font-medium">
-                     <p className="mb-0.5">DÃ­a: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_rank_details.timestamp?.split('T')[0]}</span> - <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_rank_details.timestamp?.split('T')[1]?.substring(0,5)}hs</span></p>
+                     <p className="mb-0.5">Día: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_rank_details.timestamp?.split('T')[0]}</span> - <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_rank_details.timestamp?.split('T')[1]?.substring(0,5)}hs</span></p>
                      <p>VWs: <span className="text-amber-500 font-bold">{metrics.best_rank_details.viewers}</span> | FW: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_rank_details.followers}</span></p>
-                     <p className="mt-0.5 pt-0.5 border-t border-slate-100/50 dark:border-white/5">DÃ­a Tks: <span className="text-emerald-500 font-bold">{metrics.best_rank_details.total_tokens}</span> | Top: <span className="text-blue-500 font-bold">{metrics.best_rank_details.top_user || 'N/A'}</span></p>
+                     <p className="mt-0.5 pt-0.5 border-t border-slate-100/50 dark:border-white/5">Día Tks: <span className="text-emerald-500 font-bold">{metrics.best_rank_details.total_tokens}</span> | Top: <span className="text-blue-500 font-bold">{metrics.best_rank_details.top_user || 'N/A'}</span></p>
                   </div>
                 )}
             </div>
@@ -590,9 +580,9 @@ function AnalyticsContent() {
                 </div>
                 {metrics.best_grank_details && (
                   <div className="mt-1 pt-2 border-t border-slate-100 dark:border-white/5 text-[9px] text-slate-500 font-medium">
-                     <p className="mb-0.5">DÃ­a: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_grank_details.timestamp?.split('T')[0]}</span> - <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_grank_details.timestamp?.split('T')[1]?.substring(0,5)}hs</span></p>
+                     <p className="mb-0.5">Día: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_grank_details.timestamp?.split('T')[0]}</span> - <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_grank_details.timestamp?.split('T')[1]?.substring(0,5)}hs</span></p>
                      <p>VWs: <span className="text-amber-500 font-bold">{metrics.best_grank_details.viewers}</span> | FW: <span className="text-slate-700 dark:text-slate-300 font-bold">{metrics.best_grank_details.followers}</span></p>
-                     <p className="mt-0.5 pt-0.5 border-t border-slate-100/50 dark:border-white/5">DÃ­a Tks: <span className="text-emerald-500 font-bold">{metrics.best_grank_details.total_tokens}</span> | Top: <span className="text-blue-500 font-bold">{metrics.best_grank_details.top_user || 'N/A'}</span></p>
+                     <p className="mt-0.5 pt-0.5 border-t border-slate-100/50 dark:border-white/5">Día Tks: <span className="text-emerald-500 font-bold">{metrics.best_grank_details.total_tokens}</span> | Top: <span className="text-blue-500 font-bold">{metrics.best_grank_details.top_user || 'N/A'}</span></p>
                   </div>
                 )}
             </div>
@@ -670,7 +660,7 @@ function AnalyticsContent() {
                     </div>
                     <div>
                       <p className="text-sm font-bold text-slate-900 dark:text-white">{u.name}</p>
-                      <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">AportÃ³ {((u.tokens / (totalIncome || 1)) * 100).toFixed(1)}% del total</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Aportó {((u.tokens / (totalIncome || 1)) * 100).toFixed(1)}% del total</p>
                     </div>
                   </div>
                   <div className="text-right">
@@ -686,7 +676,7 @@ function AnalyticsContent() {
               <div className="size-10 rounded-full bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
                 <span className="material-symbols-outlined text-[20px]">insights</span>
               </div>
-              <h3 className="font-bold text-white uppercase tracking-tighter text-sm">DistribuciÃ³n de Ingresos</h3>
+              <h3 className="font-bold text-white uppercase tracking-tighter text-sm">Distribución de Ingresos</h3>
             </div>
             <div className="space-y-4 flex-1">
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
@@ -704,11 +694,11 @@ function AnalyticsContent() {
               </div>
 
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <h4 className="text-emerald-500 text-xs font-bold mb-3">PÃºblico vs. Privado</h4>
+                <h4 className="text-emerald-500 text-xs font-bold mb-3">Público vs. Privado</h4>
                 
                 <div className="flex items-center gap-4 mb-2">
                    <div className="flex-1">
-                      <p className="text-slate-400 text-xs mb-1">En PÃºblico</p>
+                      <p className="text-slate-400 text-xs mb-1">En Público</p>
                       <p className="text-white font-bold">{metrics.tip_tokens?.toLocaleString()}</p>
                    </div>
                    <div className="flex-1 text-right">
@@ -727,7 +717,7 @@ function AnalyticsContent() {
                 <h4 className="text-indigo-400 text-xs font-bold mb-3">Tokens por Concepto</h4>
                 <div className="space-y-2">
                    <div className="flex justify-between text-white text-sm">
-                      <span className="text-slate-400">PÃºblico:</span>
+                      <span className="text-slate-400">Público:</span>
                       <span className="font-bold">{(metrics.income_concepts.public || 0).toLocaleString()} TK</span>
                    </div>
                    <div className="flex justify-between text-white text-sm">
@@ -735,7 +725,7 @@ function AnalyticsContent() {
                       <span className="font-bold">{(metrics.income_concepts.private || 0).toLocaleString()} TK</span>
                    </div>
                    <div className="flex justify-between text-white text-sm">
-                      <span className="text-slate-400">EspÃ­a:</span>
+                      <span className="text-slate-400">Espía:</span>
                       <span className="font-bold">{(metrics.income_concepts.spy || 0).toLocaleString()} TK</span>
                    </div>
                    <div className="flex justify-between text-white text-sm">
@@ -773,8 +763,8 @@ function AnalyticsContent() {
 
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12 relative z-10">
             <div>
-              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Peak Performance: Horas mÃ¡s Activas</h3>
-              <p className="text-xs text-slate-500 uppercase font-black tracking-widest mt-1">DistribuciÃ³n de tokens y flujo de usuarios por hora (24h)</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tighter">Peak Performance: Horas más Activas</h3>
+              <p className="text-xs text-slate-500 uppercase font-black tracking-widest mt-1">Distribución de tokens y flujo de usuarios por hora (24h)</p>
             </div>
             
             <div className="flex gap-4">
@@ -816,9 +806,9 @@ function AnalyticsContent() {
                     <div className="absolute -top-24 left-1/2 -translate-x-1/2 bg-slate-900 text-white p-3 rounded-xl text-[10px] opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-50 whitespace-nowrap border border-white/10 shadow-2xl">
                       <p className="font-black text-primary mb-1">{h.hour}:00 - {parseInt(h.hour)+1}:00</p>
                       <p className="flex items-center gap-1"><span className="size-2 rounded-full bg-primary inline-block"></span> {h.tokens?.toLocaleString()} Tokens</p>
-                      <p className="flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-500 inline-block"></span> {h.users} Usuarios Ãšnicos</p>
+                      <p className="flex items-center gap-1"><span className="size-2 rounded-full bg-emerald-500 inline-block"></span> {h.users} Usuarios Únicos</p>
                       <p className="flex items-center gap-1"><span className="size-2 rounded-full bg-amber-500 inline-block"></span> {h.avg_viewers > 0 ? Math.round(h.avg_viewers).toLocaleString() : 0} Viewers Promedio</p>
-                      {isPeak && <p className="text-[8px] font-black text-primary mt-1 uppercase tracking-tighter">â˜… HORA MÃXIMA PRODUCTIVIDAD</p>}
+                      {isPeak && <p className="text-[8px] font-black text-primary mt-1 uppercase tracking-tighter">★ HORA MÁXIMA PRODUCTIVIDAD</p>}
                     </div>
                     
                     <div className="w-full flex items-end justify-center gap-[1px] sm:gap-0.5 h-full pt-10">
@@ -852,7 +842,7 @@ function AnalyticsContent() {
             </div>
             <div className="flex items-center gap-3">
               <div className="size-3 rounded-full bg-emerald-500/40 border border-emerald-500"></div>
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-tighter">Flujo de Usuarios Ãšnicos</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-300 uppercase tracking-tighter">Flujo de Usuarios Únicos</span>
             </div>
             <div className="flex items-center gap-3">
               <div className="size-3 rounded-full bg-amber-500/40 border border-amber-500"></div>
@@ -867,7 +857,7 @@ function AnalyticsContent() {
           <div className="flex items-center justify-between mb-8 relative z-10">
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Mapa de Calor: Horario Semanal</h3>
-              <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Actividad de transmisiÃ³n en {activeTab} (VisualizaciÃ³n de CBHours)</p>
+              <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Actividad de transmisión en {activeTab} (Visualización de CBHours)</p>
             </div>
             <div className="size-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
               <span className="material-symbols-outlined text-[24px]">calendar_view_week</span>
@@ -892,7 +882,7 @@ function AnalyticsContent() {
                    const score = c.online_snapshots + (c.tokens > 0 ? 1 : 0);
                    if (score > cellMax) cellMax = score;
                 }));
-                const days = ["Dom", "Lun", "Mar", "MiÃ©", "Jue", "Vie", "SÃ¡b"];
+                const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
                 
                 return matrix.map((dayRow: any, dIndex: number) => (
                   <div key={dIndex} className="flex items-center mt-1">
@@ -941,7 +931,7 @@ function AnalyticsContent() {
                 <div className="w-4 h-4 rounded-[4px] bg-[#f59e0b] cursor-pointer hover:scale-110 transition-transform"></div>
                 <div className="w-4 h-4 rounded-[4px] bg-[#fde047] cursor-pointer hover:scale-110 transition-transform shadow-[0_0_10px_rgba(253,224,71,0.5)]"></div>
              </div>
-             <span>MÃ¡s Actividad</span>
+             <span>Más Actividad</span>
           </div>
         </div>
         )}
@@ -952,8 +942,8 @@ function AnalyticsContent() {
           <div className="bg-white dark:bg-sidebar-dark/40 p-8 rounded-3xl border border-slate-200 dark:border-primary/10 shadow-sm relative overflow-hidden">
             <div className="flex items-center justify-between mb-8 relative z-10">
               <div>
-                <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter">EvoluciÃ³n del Rank (G-Rank)</h3>
-                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Posicionamiento histÃ³rico en {activeTab}</p>
+                <h3 className="text-xl font-bold text-slate-900 dark:text-white uppercase tracking-tighter">Evolución del Rank (G-Rank)</h3>
+                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest mt-1">Posicionamiento histórico en {activeTab}</p>
               </div>
               <div className="size-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500">
                 <span className="material-symbols-outlined text-[24px]">workspace_premium</span>
@@ -983,7 +973,7 @@ function AnalyticsContent() {
                  })()
                ) : (
                  <div className="w-full h-full flex items-center justify-center border-2 border-dashed border-slate-100 dark:border-white/5 rounded-2xl">
-                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sin datos histÃ³ricos de Rank</p>
+                    <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">Sin datos históricos de Rank</p>
                  </div>
                )}
             </div>
@@ -1036,7 +1026,17 @@ function AnalyticsContent() {
           </div>
         </div>
       </>
-      </>
+      )}
+
+      {/* COMPARATIVA EVOLUTIVA */}
+      {activeTab === "Comparison" && (
+        <div className="mt-8">
+          <QuincenaComparison
+            modelId={id || ""}
+            modelName={modelData?.name || "Modelo"}
+            currentQuincena={{ start: startDate, end: endDate }}
+          />
+        </div>
       )}
 
       {/* MODAL DETALLES DEL USUARIO */}
@@ -1060,7 +1060,7 @@ function AnalyticsContent() {
               <div className="space-y-6">
                  <div>
                     <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase mb-3">
-                       <span className="material-symbols-outlined text-[16px]">schedule</span> Hora Dorada (Mayor ConversiÃ³n)
+                       <span className="material-symbols-outlined text-[16px]">schedule</span> Hora Dorada (Mayor Conversión)
                     </h4>
                     <div className="flex items-center justify-between bg-primary/5 border border-primary/20 p-4 rounded-2xl">
                        <span className="text-2xl font-black text-primary">{selectedTipper.details?.topHour?.hour || "N/A"}:00</span>
@@ -1070,7 +1070,7 @@ function AnalyticsContent() {
 
                  <div>
                     <h4 className="flex items-center gap-2 text-[10px] font-black tracking-widest text-slate-400 uppercase mb-3">
-                       <span className="material-symbols-outlined text-[16px]">calendar_month</span> DÃ­as Frecuentados
+                       <span className="material-symbols-outlined text-[16px]">calendar_month</span> Días Frecuentados
                     </h4>
                     <div className="flex flex-wrap gap-2 max-h-[160px] overflow-y-auto pr-2 custom-scrollbar">
                        {selectedTipper.details?.days?.length > 0 ? (
@@ -1094,7 +1094,7 @@ function AnalyticsContent() {
 
 export default function ModelAnalyticsPage() {
   return (
-    <Suspense fallback={<LoadingScreen message="Cargando analÃ­ticas..." />}>
+    <Suspense fallback={<LoadingScreen message="Cargando analíticas..." />}>
       <AnalyticsContent />
     </Suspense>
   );
