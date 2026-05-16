@@ -434,7 +434,6 @@ function AnalyticsContent() {
              Volver a Galería
            </Link>
         </div>
-      </div>
 
        {/* Tabs Navigator */}
        <div className="flex justify-center border-b border-slate-200 dark:border-white/10 mt-8">
