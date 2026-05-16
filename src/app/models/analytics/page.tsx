@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import LoadingScreen from "@/components/common/LoadingScreen";
+import QuincenaComparison from "@/components/analytics/QuincenaComparison";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
@@ -11,7 +12,7 @@ import { useAuth } from "@/context/AuthContext";
 function AnalyticsContent() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
-  const id = searchParams.get('id');
+  const id = searchParams.get('id') || "";
   
   // Generar fechas rápidas (Quincenas de los últimos 3 meses)
   const generateQuickDates = () => {
@@ -46,7 +47,7 @@ function AnalyticsContent() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [modelData, setModelData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"Chaturbate" | "Stripchat" | "Combined">("Chaturbate");
+  const [activeTab, setActiveTab] = useState<"Chaturbate" | "Stripchat" | "Combined" | "Comparison">("Chaturbate");
 
   const [cbMetrics, setCbMetrics] = useState<any>(null);
   const [scMetrics, setScMetrics] = useState<any>(null);
@@ -397,7 +398,7 @@ function AnalyticsContent() {
                 className="bg-slate-100 dark:bg-sidebar-dark border border-slate-200 dark:border-white/10 text-sm font-bold rounded-xl px-4 py-2 outline-none text-slate-700 dark:text-slate-300"
              >
                 <option value="" disabled>Selección rápida...</option>
-                {quickDates.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                {quickDates.map(p => <option key={p.value} value={p.label}>{p.label}</option>)}
              </select>
              
              <div className="flex items-center gap-2 bg-slate-100 dark:bg-sidebar-dark border border-slate-200 dark:border-white/10 rounded-xl px-2 py-1">
@@ -455,7 +456,24 @@ function AnalyticsContent() {
           >
              <span className="material-symbols-outlined text-[18px]">donut_large</span> Combinado (Ambas)
           </button>
+          <button
+             onClick={() => setActiveTab("Comparison")}
+             className={`px-8 py-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${activeTab === "Comparison" ? "text-emerald-500 border-emerald-500" : "text-slate-500 border-transparent hover:text-emerald-500"}`}
+          >
+             <span className="material-symbols-outlined text-[18px]">compare_arrows</span> Comparativa
+          </button>
        </div>
+
+       {activeTab === "Comparison" ? (
+         <div className="mt-8">
+           <QuincenaComparison 
+             modelId={id} 
+             modelName={modelData?.name || "Modelo"} 
+             currentQuincena={{ start: startDate, end: endDate }}
+           />
+         </div>
+       ) : (
+       <>
 
 
       {loadingGlobal ? (
