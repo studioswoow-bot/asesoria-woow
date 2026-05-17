@@ -7,6 +7,7 @@ import { collection, getDocs, query } from "firebase/firestore";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { calculateProfileProgress } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import ModelAvatar from "@/components/common/ModelAvatar";
 
 interface Model {
   id: string;
@@ -19,6 +20,7 @@ interface Model {
   nickname?: string;
   isOnline?: boolean;
   syncStatus?: string;
+  photo_url?: string;
 }
 
 export default function ModelsPage() {
@@ -60,7 +62,8 @@ export default function ModelsPage() {
             lastActive: mData.lastActive || "Desconocido",
             nickname: mData.nickname || "",
             isOnline: mData.is_online || false,
-            syncStatus: mData.stream_stats?.last_sync_status || "offline"
+            syncStatus: mData.stream_stats?.last_sync_status || "offline",
+            photo_url: mData.photo_url || null
           };
         });
 
@@ -154,9 +157,12 @@ export default function ModelsPage() {
                 <tr key={model.id} className="hover:bg-text-main/5 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="size-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-primary font-bold overflow-hidden uppercase">
-                        {model.name.split(" ").map(n => n[0]).join("").substring(0, 2)}
-                      </div>
+                      <ModelAvatar 
+                        name={model.name} 
+                        nickname={model.nickname} 
+                        photoUrl={model.photo_url} 
+                        size="md" 
+                      />
                     <div className="flex flex-col">
                       <div className="text-sm font-bold text-text-main group-hover:text-primary transition-colors flex items-center gap-2">
                         {model.name} ({model.nickname || "sin_apodo"})

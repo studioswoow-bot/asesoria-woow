@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
@@ -8,6 +8,7 @@ import QuincenaComparison from "@/components/analytics/QuincenaComparison";
 import { db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
+import ModelAvatar from "@/components/common/ModelAvatar";
 
 function AnalyticsContent() {
   const { user } = useAuth();
@@ -366,13 +367,12 @@ function AnalyticsContent() {
     <div className="space-y-8 animate-in fade-in duration-700">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-sidebar-dark/40 p-8 rounded-3xl border border-slate-200 dark:border-primary/10 shadow-xl shadow-primary/5">
         <div className="flex items-center gap-6">
-          <div className="relative">
-            <div className={`size-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 p-1 shadow-lg shadow-primary/20`}>
-              <div className="size-full bg-sidebar-dark rounded-xl flex items-center justify-center text-white font-black text-2xl uppercase">
-                {modelData?.name?.[0] || modelData?.nickname?.[0] || '?'}
-              </div>
-            </div>
-          </div>
+          <ModelAvatar 
+             name={modelData?.name || ''} 
+             nickname={modelData?.nickname} 
+             photoUrl={modelData?.photo_url} 
+             size="xl" 
+          />
           <div>
             <h1 className="text-3xl font-black text-slate-900 dark:text-white flex items-center gap-3">
               {modelData?.name} ({modelData?.nickname || "sin_apodo"})

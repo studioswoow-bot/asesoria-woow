@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import LoadingScreen from "@/components/common/LoadingScreen";
+import ModelAvatar from "@/components/common/ModelAvatar";
 
 interface Model {
   id: string;
@@ -15,6 +16,7 @@ interface Model {
   nickname?: string;
   isOnline?: boolean;
   syncStatus?: string;
+  photo_url?: string;
 }
 
 interface ModelTableProps {
@@ -55,9 +57,12 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
               <tr key={model.id} className="hover:bg-text-main/5 transition-colors group">
                 <td className="py-4 px-6">
                   <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold border border-primary/30 shrink-0 uppercase">
-                      {typeof model.name === 'string' ? model.name.split(" ").map(n => n[0]).join("").substring(0, 2) : "M"}
-                    </div>
+                    <ModelAvatar 
+                      name={String(model.name || '')} 
+                      nickname={model.nickname} 
+                      photoUrl={model.photo_url} 
+                      size="md" 
+                    />
                     <div>
                       <p className="text-sm font-bold text-text-main group-hover:text-primary transition-colors">{String(model.name || "Sin nombre")} ({String(model.nickname || "sin_apodo")})</p>
                       <p className="text-[10px] text-text-muted">@{String(model.nickname || "sin_apodo")}</p>

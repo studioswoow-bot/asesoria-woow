@@ -6,12 +6,14 @@ import { useActionPlans, ActionPlan, DailyTracking, HistoryEntry } from "@/conte
 import { db } from "@/lib/firebase";
 import { collection, query, getDocs, where, limit, orderBy } from "firebase/firestore";
 import LoadingScreen from "@/components/common/LoadingScreen";
+import ModelAvatar from "@/components/common/ModelAvatar";
 
 interface ModelOption {
   id: string;
   name: string;
   nickname?: string;
   status: string;
+  photoUrl?: string;
 }
 
 function ActionPlansContent() {
@@ -86,7 +88,8 @@ function ActionPlansContent() {
           id: doc.id,
           name: doc.data().name,
           nickname: doc.data().nickname,
-          status: doc.data().status
+          status: doc.data().status,
+          photoUrl: doc.data().photo_url
         }));
         setModels(modelList);
         
@@ -432,9 +435,11 @@ function ActionPlansContent() {
                       className="bg-panel-dark border border-text-main/10 rounded-2xl p-6 hover:border-primary/50 transition-all cursor-pointer h-full shadow-lg"
                     >
                       <div className="flex justify-between items-start mb-4">
-                        <div className="size-10 bg-primary/20 rounded-lg flex items-center justify-center text-primary">
-                          <span className="material-symbols-outlined">person</span>
-                        </div>
+                        <ModelAvatar 
+                          name={plan.modelName} 
+                          photoUrl={models.find(m => m.id === plan.modelId)?.photoUrl} 
+                          size="md" 
+                        />
                         <div className="flex items-center gap-2 pr-8"> {/* Reserve space for absolute button */}
                           <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${plan.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-500'}`}>
                             {plan.status === 'active' ? 'Activo' : 'Completado'}

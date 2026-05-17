@@ -9,6 +9,7 @@ import LoadingScreen from "@/components/common/LoadingScreen";
 import { calculateWooWRating, WooWRatingResult } from "@/lib/ratingAlgorithm";
 import { ActionPlan } from '@/context/ActionPlanContext';
 import { useAuth } from '@/context/AuthContext';
+import ModelAvatar from '@/components/common/ModelAvatar';
 
 interface ModelData {
   id: string;
@@ -21,6 +22,7 @@ interface ModelData {
   shift?: string;
   progress?: number;
   artisticName?: string;
+  photo_url?: string;
 }
 
 function ProfileContent() {
@@ -157,12 +159,13 @@ function ProfileContent() {
 
         <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
           <div className="relative">
-            <div className="size-40 rounded-full bg-gradient-to-tr from-primary via-accent-gold to-amber-200 p-1 shadow-2xl shadow-primary/20">
-              <div className="size-full rounded-full bg-panel-dark flex items-center justify-center text-5xl font-black text-primary border-4 border-panel-dark overflow-hidden">
-                {initials}
-              </div>
-            </div>
-            <div className="absolute -bottom-2 right-4 px-4 py-1.5 bg-green-500 text-white text-[10px] font-black rounded-full border-4 border-sidebar-dark shadow-xl">
+            <ModelAvatar 
+              name={model.name} 
+              nickname={model.artisticName || model.nickname} 
+              photoUrl={model.photo_url} 
+              size="3xl"
+            />
+            <div className="absolute -bottom-2 right-4 px-4 py-1.5 bg-green-500 text-white text-[10px] font-black rounded-full border-4 border-sidebar-dark shadow-xl z-20">
               ACTIVA
             </div>
           </div>
