@@ -181,14 +181,16 @@ function AnalyticsContent() {
       if(h.tokens > peak_tokens) { peak_tokens = h.tokens; peak_hour = h.hour; }
     });
   
-    const combinedBestRank = Math.min(...[cb.best_rank, sc.best_rank].filter(r => r > 0)) || 0;
+    const rankCandidates = [cb.best_rank, sc.best_rank].filter(r => r != null && r > 0 && isFinite(r));
+    const combinedBestRank = rankCandidates.length > 0 ? Math.min(...rankCandidates) : 0;
     let combinedRankDetails = null;
     if (combinedBestRank > 0) {
        if (combinedBestRank === cb.best_rank) combinedRankDetails = cb.best_rank_details;
        else combinedRankDetails = sc.best_rank_details;
     }
 
-    const combinedBestGrank = Math.min(...[cb.best_grank, sc.best_grank].filter(r => r > 0)) || 0;
+    const grankCandidates = [cb.best_grank, sc.best_grank].filter(r => r != null && r > 0 && isFinite(r));
+    const combinedBestGrank = grankCandidates.length > 0 ? Math.min(...grankCandidates) : 0;
     let combinedGrankDetails = null;
     if (combinedBestGrank > 0) {
        if (combinedBestGrank === cb.best_grank) combinedGrankDetails = cb.best_grank_details;
@@ -295,6 +297,7 @@ function AnalyticsContent() {
     };
   };
 
+  // For Comparison tab, show combined metrics in the supplementary cards
   const metrics = activeTab === "Chaturbate" ? cbMetrics : (activeTab === "Stripchat" ? scMetrics : getCombinedMetrics());
   const evolutionData = metrics?.history || [];
 
@@ -550,18 +553,22 @@ function AnalyticsContent() {
       </>
       )}
 
-      {/* MÉTRICAS SUPLEMENTARIAS DRIVE */}
+      {/* MÉTRICAS SUPLEMENTARIAS DRIVE - ocultar solo el encabezado si no hay datos y es Comparison */}
+      {(activeTab !== "Comparison" || metrics) && (
       <h2 className="text-lg font-black text-slate-800 dark:text-white mb-4 uppercase flex items-center gap-2 mt-12">
         <span className="material-symbols-outlined text-accent-gold">folder_managed</span>
         Métricas Complementarias (Drive) - {activeTab}
       </h2>
+      )}
 
-      {metrics && (
+      {(activeTab !== "Comparison" || metrics) && metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="p-4 bg-white dark:bg-sidebar-dark/40 border border-slate-200 dark:border-white/10 rounded-3xl flex flex-col justify-start shadow-sm min-h-[120px]">
                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">Mejor Rank</p>
                 <div className="flex items-center gap-2 mb-2">
-                   <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-none">{metrics.best_rank > 0 ? metrics.best_rank : '--'}</h4>
+                   <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                     {(metrics.best_rank > 0 && isFinite(metrics.best_rank)) ? `#${metrics.best_rank}` : '--'}
+                   </h4>
                    <span className="material-symbols-outlined text-accent-gold text-lg">trophy</span>
                 </div>
                 {metrics.best_rank_details && (
@@ -573,9 +580,11 @@ function AnalyticsContent() {
                 )}
             </div>
             <div className="p-4 bg-white dark:bg-sidebar-dark/40 border border-slate-200 dark:border-white/10 rounded-3xl flex flex-col justify-start shadow-sm min-h-[120px]">
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">G-Rank</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">G-Rank (Global)</p>
                 <div className="flex items-center gap-2 mb-2">
-                   <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-none">{metrics.best_grank > 0 ? metrics.best_grank : '--'}</h4>
+                   <h4 className="text-2xl font-black text-slate-900 dark:text-white leading-none">
+                     {(metrics.best_grank > 0 && isFinite(metrics.best_grank)) ? `#${metrics.best_grank}` : '--'}
+                   </h4>
                    <span className="material-symbols-outlined text-emerald-500 text-lg">public</span>
                 </div>
                 {metrics.best_grank_details && (
@@ -587,15 +596,19 @@ function AnalyticsContent() {
                 )}
             </div>
             <div className="p-4 bg-white dark:bg-sidebar-dark/40 border border-slate-200 dark:border-white/10 rounded-3xl flex flex-col justify-center shadow-sm">
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">Crecimiento (Periodo)</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">Nuevos Seguidores</p>
                 <div className="flex items-end gap-2">
-                   <h4 className={`text-2xl font-black ${metrics.follower_growth > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {metrics.follower_growth > 0 ? '+' : ''}{metrics.follower_growth || '--'}
+                   <h4 className={`text-2xl font-black ${(metrics.follower_growth ?? 0) > 0 ? 'text-emerald-500' : (metrics.follower_growth ?? 0) < 0 ? 'text-rose-500' : 'text-slate-400'}`}>
+                      {(metrics.follower_growth ?? 0) > 0 ? '+' : ''}{(metrics.follower_growth != null && metrics.follower_growth !== 0) ? metrics.follower_growth.toLocaleString() : '--'}
                    </h4>
-                   <span className={`material-symbols-outlined mb-1 ${metrics.follower_growth > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                      {metrics.follower_growth > 0 ? 'trending_up' : 'trending_down'}
+                   <span className={`material-symbols-outlined mb-1 ${
+                     (metrics.follower_growth ?? 0) > 0 ? 'text-emerald-500' : 
+                     (metrics.follower_growth ?? 0) < 0 ? 'text-rose-500' : 'text-slate-400'
+                   }`}>
+                      {(metrics.follower_growth ?? 0) > 0 ? 'trending_up' : (metrics.follower_growth ?? 0) < 0 ? 'trending_down' : 'remove'}
                    </span>
                 </div>
+                <p className="text-[9px] text-slate-400 mt-1">ganados en el periodo</p>
             </div>
             <div className="p-4 bg-white dark:bg-sidebar-dark/40 border border-slate-200 dark:border-white/10 rounded-3xl flex flex-col justify-center shadow-sm">
                 <p className="text-[10px] uppercase tracking-widest text-slate-400 font-black mb-1">Seguidores Act.</p>

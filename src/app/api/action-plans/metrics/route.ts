@@ -24,7 +24,7 @@ async function verifyAuthToken(req: Request) {
   }
 
   const role = userDoc.data()?.role;
-  const allowedRoles = ["admin", "monitor", "coordinador"];
+  const allowedRoles = ["admin", "monitor", "coordinador", "model"];
   
   if (!allowedRoles.includes(role)) {
     throw new Error("Acceso denegado: Rol insuficiente.");
@@ -224,22 +224,43 @@ export async function GET(req: NextRequest) {
       const businessDays = Math.max(0, safetyLimit - sundaysCount - festivosCount);
       const expectedHoursMensual = businessDays * 6; // 6 horas obligatorias por día hábil
 
-      // FALLBACK HORAS ONLINE DE CACHE (Drive/Chaturbate) SI NO HAY REGISTRO EN WORK_HOURS
-      if (totalHours === 0) {
+      // FALLBACK DE HORAS Y TOKENS DESDE CACHÉ DE PLATAFORMA
+      // Si no hay registro en work_hours o daily_metrics, usar la caché de Drive (Chaturbate/Stripchat)
+      const periodKey = `${startDate}_to_${endDate}`;
+      
+      if (totalHours === 0 || totalTokens === 0) {
         try {
-          const scCacheDoc = await adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${startDate}_to_${endDate}_Stripchat`).get();
-          if (scCacheDoc.exists && scCacheDoc.data()?.platform_total_hours > 0) {
-              totalHours = scCacheDoc.data()?.platform_total_hours;
-              console.log(`[MetricsAPI] Fallback de horas usando caché Stripchat: ${totalHours} hrs.`);
-          } else {
-              const cbCacheDoc = await adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${startDate}_to_${endDate}_Chaturbate`).get();
-              if (cbCacheDoc.exists && cbCacheDoc.data()?.platform_total_hours > 0) {
-                  totalHours = cbCacheDoc.data()?.platform_total_hours;
-                  console.log(`[MetricsAPI] Fallback de horas usando caché Chaturbate: ${totalHours} hrs.`);
-              }
+          const [scCacheDoc, cbCacheDoc] = await Promise.all([
+            adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${periodKey}_Stripchat`).get(),
+            adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${periodKey}_Chaturbate`).get(),
+          ]);
+
+          const scData = scCacheDoc.exists ? scCacheDoc.data() : null;
+          const cbData = cbCacheDoc.exists ? cbCacheDoc.data() : null;
+
+          // Fallback de horas
+          if (totalHours === 0) {
+            const scHours = scData?.platform_total_hours || 0;
+            const cbHours = cbData?.platform_total_hours || 0;
+            const cacheHours = scHours + cbHours;
+            if (cacheHours > 0) {
+              totalHours = cacheHours;
+              console.log(`[MetricsAPI] Fallback horas desde caché: SC=${scHours}h + CB=${cbHours}h = ${totalHours}h`);
+            }
+          }
+
+          // Fallback de tokens
+          if (totalTokens === 0) {
+            const scTokens = scData?.total_tokens || 0;
+            const cbTokens = cbData?.total_tokens || 0;
+            const cacheTokens = scTokens + cbTokens;
+            if (cacheTokens > 0) {
+              totalTokens = cacheTokens;
+              console.log(`[MetricsAPI] Fallback tokens desde caché: SC=${scTokens} + CB=${cbTokens} = ${totalTokens}`);
+            }
           }
         } catch (e) {
-          console.error("[MetricsAPI] Error buscando fallback de horas en caché:", e);
+          console.error("[MetricsAPI] Error buscando fallback de horas/tokens en caché:", e);
         }
       }
 

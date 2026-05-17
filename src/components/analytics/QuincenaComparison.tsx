@@ -157,10 +157,20 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
           const cbData = cbSnap.exists() ? cbSnap.data() : null;
           const scData = scSnap.exists() ? scSnap.data() : null;
 
-          const bestRank = Math.min(...[cbData?.best_rank, scData?.best_rank].filter(r => r > 0)) || 0;
-          const bestGrank = Math.min(...[cbData?.best_grank, scData?.best_grank].filter(r => r > 0)) || 0;
+          const rankCands = [cbData?.best_rank, scData?.best_rank].filter(r => r != null && r > 0 && isFinite(r));
+          const bestRank = rankCands.length > 0 ? Math.min(...rankCands) : 0;
+          const grankCands = [cbData?.best_grank, scData?.best_grank].filter(r => r != null && r > 0 && isFinite(r));
+          const bestGrank = grankCands.length > 0 ? Math.min(...grankCands) : 0;
           const followers = Math.max(cbData?.followers_current || 0, scData?.followers_current || 0);
-          const followerGrowth = (cbData?.follower_growth || 0) + (scData?.follower_growth || 0);
+          // follower_growth: use stored field first, fallback to history delta
+          let followerGrowth = (cbData?.follower_growth || 0) + (scData?.follower_growth || 0);
+          if (followerGrowth === 0) {
+            const cbHist = (cbData?.history || []).sort((a: any, b: any) => a.date.localeCompare(b.date));
+            const scHist = (scData?.history || []).sort((a: any, b: any) => a.date.localeCompare(b.date));
+            const cbDelta = cbHist.length >= 2 ? Math.max(0, (cbHist[cbHist.length-1]?.followers || 0) - (cbHist[0]?.followers || 0)) : 0;
+            const scDelta = scHist.length >= 2 ? Math.max(0, (scHist[scHist.length-1]?.followers || 0) - (scHist[0]?.followers || 0)) : 0;
+            followerGrowth = cbDelta + scDelta;
+          }
 
           return {
             label: q.label,
@@ -351,7 +361,7 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
                 </td>
                 {quincenas.map(q => (
                   <td key={q.label} className="p-6 text-center">
-                    <p className="font-black text-slate-900 dark:text-white">{q.metrics.bestRank || '--'}</p>
+                    <p className="font-black text-slate-900 dark:text-white">{(q.metrics.bestRank > 0 && isFinite(q.metrics.bestRank)) ? `#${q.metrics.bestRank}` : '--'}</p>
                   </td>
                 ))}
               </tr>
@@ -364,7 +374,7 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
                 </td>
                 {quincenas.map(q => (
                   <td key={q.label} className="p-6 text-center">
-                    <p className="font-black text-slate-900 dark:text-white">{q.metrics.bestGrank || '--'}</p>
+                    <p className="font-black text-slate-900 dark:text-white">{(q.metrics.bestGrank > 0 && isFinite(q.metrics.bestGrank)) ? `#${q.metrics.bestGrank}` : '--'}</p>
                   </td>
                 ))}
               </tr>
@@ -391,18 +401,19 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="bg-white dark:bg-sidebar-dark/40 p-8 rounded-3xl border border-slate-200 dark:border-primary/10 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-tighter">Tendencia de Eficiencia (TPH)</h3>
-          <div className="h-48 flex items-end gap-4">
+          <div className="h-48 flex items-end gap-2 relative">
              {quincenas.map((q, i) => {
-               const maxTph = Math.max(...quincenas.map(x => x.metrics.tph), 1);
-               const height = (q.metrics.tph / maxTph) * 100;
+               const maxTph = Math.max(...quincenas.map(x => x.metrics.tph), 0.01);
+               const height = Math.max((q.metrics.tph / maxTph) * 100, q.metrics.tph > 0 ? 4 : 0);
                return (
-                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                   <div className="w-full bg-primary/20 rounded-t-xl transition-all group-hover:bg-primary relative" style={{ height: `${height}%` }}>
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-lg font-black">
-                        {q.metrics.tph.toFixed(1)}
-                      </div>
+                 <div key={i} className="flex-1 flex flex-col items-end justify-end group h-full">
+                   <div className="relative w-full" style={{ height: `${height}%`, minHeight: q.metrics.tph > 0 ? '6px' : '0' }}>
+                     <div className="w-full h-full bg-indigo-500/30 rounded-t-lg group-hover:bg-indigo-500 transition-colors" />
+                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-lg font-black whitespace-nowrap z-10">
+                       {q.metrics.tph > 0 ? q.metrics.tph.toFixed(1) : 'Sin datos'}
+                     </div>
                    </div>
-                   <span className="text-[9px] font-black text-slate-400 uppercase vertical-text h-12 text-center flex items-center justify-center">
+                   <span className="text-[9px] font-black text-slate-400 uppercase text-center mt-2 leading-tight">
                      {q.label.replace(' 2026', '').replace(' 2025', '')}
                    </span>
                  </div>
@@ -413,17 +424,18 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
 
         <div className="bg-white dark:bg-sidebar-dark/40 p-8 rounded-3xl border border-slate-200 dark:border-primary/10 shadow-sm">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 uppercase tracking-tighter">Cumplimiento (ICJ %)</h3>
-          <div className="h-48 flex items-end gap-4">
+          <div className="h-48 flex items-end gap-2 relative">
              {quincenas.map((q, i) => {
-               const height = q.metrics.icj; // Since it's %
+               const height = Math.min(Math.max(q.metrics.icj, q.metrics.icj > 0 ? 4 : 0), 100);
                return (
-                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                   <div className="w-full bg-emerald-500/20 rounded-t-xl transition-all group-hover:bg-emerald-500 relative" style={{ height: `${Math.min(height, 100)}%` }}>
-                      <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-lg font-black">
-                        {q.metrics.icj.toFixed(0)}%
-                      </div>
+                 <div key={i} className="flex-1 flex flex-col items-end justify-end group h-full">
+                   <div className="relative w-full" style={{ height: `${height}%`, minHeight: q.metrics.icj > 0 ? '6px' : '0' }}>
+                     <div className="w-full h-full bg-emerald-500/30 rounded-t-lg group-hover:bg-emerald-500 transition-colors" />
+                     <div className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-[10px] px-2 py-1 rounded-lg font-black whitespace-nowrap z-10">
+                       {q.metrics.icj > 0 ? `${q.metrics.icj.toFixed(0)}%` : 'Sin datos'}
+                     </div>
                    </div>
-                   <span className="text-[9px] font-black text-slate-400 uppercase vertical-text h-12 text-center flex items-center justify-center">
+                   <span className="text-[9px] font-black text-slate-400 uppercase text-center mt-2 leading-tight">
                      {q.label.replace(' 2026', '').replace(' 2025', '')}
                    </span>
                  </div>
@@ -443,12 +455,32 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
             <p className="text-slate-400 text-xs mt-1">Análisis de evolución histórica de {modelName || 'la modelo'}</p>
           </div>
         </div>
+
+        {/* Glosario de términos */}
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+            <p className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1">TPH — Tokens por Hora</p>
+            <p className="text-[10px] text-slate-400 leading-relaxed">Mide la eficiencia productiva: cuántos tokens genera la modelo por cada hora transmitida. Más alto = mejor rendimiento.</p>
+          </div>
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+            <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">ICJ % — Índice de Cumplimiento de Jornada</p>
+            <p className="text-[10px] text-slate-400 leading-relaxed">Porcentaje de horas trabajadas sobre las horas obligatorias del periodo (6h/día hábil). 100% = cumplimiento total.</p>
+          </div>
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20">
+            <p className="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-1">ICR — Índice de Conversión Real</p>
+            <p className="text-[10px] text-slate-400 leading-relaxed">Combina eficiencia (TPH) y disciplina (ICJ): TPH × ICJ/100. Refleja el rendimiento real considerando asistencia.</p>
+          </div>
+          <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+            <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Rank / G-Rank</p>
+            <p className="text-[10px] text-slate-400 leading-relaxed">Posición en el ranking de la plataforma. <b className="text-white">Rank</b>: categoría. <b className="text-white">G-Rank</b>: posición global entre todas las modelos.</p>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
             <p className="text-[10px] uppercase font-black text-slate-500 mb-2">Pico de Ingresos</p>
             <p className="text-white font-bold text-lg">
-              {quincenas.reduce((max, q) => q.metrics.totalTokens > max.val ? { label: q.label, val: q.metrics.totalTokens } : max, { label: '', val: 0 }).label}
+              {quincenas.reduce((max, q) => q.metrics.totalTokens > max.val ? { label: q.label, val: q.metrics.totalTokens } : max, { label: '', val: 0 }).label || '--'}
             </p>
             <p className="text-primary font-black text-xl">
               {quincenas.reduce((max, q) => Math.max(max, q.metrics.totalTokens), 0).toLocaleString()} TK
@@ -458,20 +490,20 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
           <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
             <p className="text-[10px] uppercase font-black text-slate-500 mb-2">Mejor Eficiencia (TPH)</p>
             <p className="text-white font-bold text-lg">
-              {quincenas.reduce((max, q) => q.metrics.tph > max.val ? { label: q.label, val: q.metrics.tph } : max, { label: '', val: 0 }).label}
+              {quincenas.reduce((max, q) => q.metrics.tph > max.val ? { label: q.label, val: q.metrics.tph } : max, { label: '', val: 0 }).label || '--'}
             </p>
             <p className="text-indigo-400 font-black text-xl">
-              {quincenas.reduce((max, q) => Math.max(max, q.metrics.tph), 0).toFixed(2)}
+              {quincenas.reduce((max, q) => Math.max(max, q.metrics.tph), 0).toFixed(2)} TPH
             </p>
           </div>
 
           <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
-            <p className="text-[10px] uppercase font-black text-slate-500 mb-2">Mayor Crecimiento</p>
+            <p className="text-[10px] uppercase font-black text-slate-500 mb-2">Mayor Crecimiento de Audiencia</p>
             <p className="text-white font-bold text-lg">
-              {quincenas.reduce((max, q) => q.metrics.followerGrowth > max.val ? { label: q.label, val: q.metrics.followerGrowth } : max, { label: '', val: 0 }).label}
+              {quincenas.reduce((max, q) => q.metrics.followerGrowth > max.val ? { label: q.label, val: q.metrics.followerGrowth } : max, { label: '', val: 0 }).label || '--'}
             </p>
             <p className="text-emerald-500 font-black text-xl">
-              +{quincenas.reduce((max, q) => Math.max(max, q.metrics.followerGrowth), 0).toLocaleString()} FW
+              +{quincenas.reduce((max, q) => Math.max(max, q.metrics.followerGrowth), 0).toLocaleString()} Seguidores
             </p>
           </div>
         </div>
