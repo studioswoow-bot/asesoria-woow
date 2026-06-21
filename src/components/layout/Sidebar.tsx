@@ -89,10 +89,16 @@ export default function Sidebar() {
               <div className="pt-4 pb-2">
                 <p className="text-[10px] font-black text-text-muted uppercase tracking-widest px-4 mb-2">Administración</p>
                 {profile?.role === 'admin' && (
-                  <Link href="/users" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname === "/users" ? "bg-primary/20 text-accent-gold border border-primary/30 shadow-lg shadow-primary/5" : "text-text-muted hover:bg-text-main/5 hover:text-text-main"}`}>
-                    <span className="material-symbols-outlined text-[20px]">manage_accounts</span>
-                    <span className="font-bold text-sm">Usuarios</span>
-                  </Link>
+                  <>
+                    <Link href="/users" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname === "/users" ? "bg-primary/20 text-accent-gold border border-primary/30 shadow-lg shadow-primary/5" : "text-text-muted hover:bg-text-main/5 hover:text-text-main"}`}>
+                      <span className="material-symbols-outlined text-[20px]">manage_accounts</span>
+                      <span className="font-bold text-sm">Usuarios</span>
+                    </Link>
+                    <Link href="/transfers" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname === "/transfers" ? "bg-primary/20 text-accent-gold border border-primary/30 shadow-lg shadow-primary/5" : "text-text-muted hover:bg-text-main/5 hover:text-text-main"}`}>
+                      <span className="material-symbols-outlined text-[20px]">security</span>
+                      <span className="font-bold text-sm">Auditoría de Fugas</span>
+                    </Link>
+                  </>
                 )}
                 <Link href="/users/mapping" className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${pathname === "/users/mapping" ? "bg-primary/20 text-accent-gold border border-primary/30 shadow-lg shadow-primary/5" : "text-text-muted hover:bg-text-main/5 hover:text-text-main"}`}>
                   <span className="material-symbols-outlined text-[20px]">link</span>

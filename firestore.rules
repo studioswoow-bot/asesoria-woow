@@ -84,9 +84,14 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // Transacciones sospechosas: Solo accesible por Administradores
+    match /suspicious_transfers/{transferId} {
+      allow read, write: if request.auth != null && getUserData().role == 'admin';
+    }
+
     // Permitir acceso total al Staff para el resto de la base de datos (Operatividad)
     match /{document=**} {
-      allow read, write: if isStaff();
+      allow read, write: if isStaff() && !(request.path.size() > 3 && request.path[3] == 'suspicious_transfers');
     }
   }
 }

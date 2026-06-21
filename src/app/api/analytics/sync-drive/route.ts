@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import admin, { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { getDriveClient } from "@/lib/google-drive";
 import * as xlsx from "xlsx";
 import fs from 'fs';
@@ -222,6 +222,7 @@ export async function POST(req: Request) {
     // 6. Obtener nombres de todas las modelos para excluir propinas entre ellas (Chaturbate)
     const EXCLUDED_STUDIO_USERS = ["woow_studies", "woow_admin", "woow_monitor", "estudioswoow", "woow_estudios", "woow_estudio"];
     
+    const modelNamesMap = new Map<string, { name: string, nickname: string }>();
     try {
       const modelsSnap = await adminDb.collection("models").get();
       
@@ -236,6 +237,10 @@ export async function POST(req: Request) {
 
       modelsSnap.docs.forEach(doc => {
         const data = doc.data();
+        modelNamesMap.set(doc.id, {
+          name: data.name || data.nickname || "Modelo Desconocida",
+          nickname: data.nickname || ""
+        });
         if (data.name) {
            const norm = normalizeUsername(data.name);
            EXCLUDED_STUDIO_USERS.push(norm);
@@ -249,9 +254,10 @@ export async function POST(req: Request) {
     } catch (e) {
       console.warn("[Drive Sync] Error recuperando lista de modelos para exclusión:", e);
     }
-    let totalTokens = 0;
-    let tipTokens = 0;
-    let privateTokens = 0;
+     let totalTokens = 0;
+     const suspiciousTransfers: any[] = [];
+     let tipTokens = 0;
+     let privateTokens = 0;
     const incomeConcepts: Record<string, number> = { private: 0, spy: 0, public: 0, videos: 0, photos: 0, other: 0 };
     const tippersMap: Record<string, number> = {};
     const tippersDetailedMap: Record<string, { totalTokens: number, hours: Record<string, number>, days: Set<string> }> = {};
@@ -508,6 +514,32 @@ export async function POST(req: Request) {
                 if (!lastTx || txTime > lastTx) lastTx = txTime;
             } else {
                 return; // Fuera de rango
+            }
+
+            // Detección de Fuga de Fichas (Tokens salientes / negativos)
+            if (tokensVal < 0) {
+              const cleanUser = username.toLowerCase();
+              const isStudioTransfer = type.includes("estudio") || cleanUser.includes("estudios") || cleanUser.includes("studio") || EXCLUDED_STUDIO_USERS.includes(cleanUser);
+              const isFee = type.includes("tasa") || type.includes("fee") || type.includes("proveedor") || cleanUser.includes("dreamcam") || cleanUser.includes("vr");
+              
+              if (!isStudioTransfer && !isFee) {
+                const dateObj = new Date(txTime);
+                const dateStr = dateObj.toISOString().split('T')[0];
+                const timeStr = dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                
+                suspiciousTransfers.push({
+                  modelId: modelId,
+                  modelName: modelNamesMap.get(modelId)?.name || nickname || "Modelo Desconocida",
+                  modelNickname: modelNamesMap.get(modelId)?.nickname || nickname || "",
+                  fileName: file.name || "Unknown",
+                  timestamp: txTime,
+                  date: dateStr,
+                  time: timeStr,
+                  amount: Math.abs(tokensVal),
+                  recipient: username,
+                  action: type || "Salida de Fichas"
+                });
+              }
             }
 
             const isEarning = type.includes("propina") || type.includes("tip") || type.includes("token") || 
@@ -914,6 +946,22 @@ export async function POST(req: Request) {
     // 7. Guardar en Firestore (modelos_analytics_cache_v2)
     const docId = `${modelId}_${period}_${platform}`;
     await adminDb.collection("modelos_analytics_cache_v2").doc(docId).set(summaryPayload, { merge: true });
+
+    // 8. Guardar transferencias sospechosas detectadas
+    if (suspiciousTransfers.length > 0) {
+      console.log(`[Drive Sync] Guardando ${suspiciousTransfers.length} transferencias sospechosas en Firestore...`);
+      const dbInstance = adminDb!;
+      const batch = dbInstance.batch();
+      suspiciousTransfers.forEach(transfer => {
+        const transferDocId = `${transfer.modelId}_${transfer.timestamp}_${transfer.recipient}_${transfer.amount}`;
+        const docRef = dbInstance.collection("suspicious_transfers").doc(transferDocId);
+        batch.set(docRef, {
+          ...transfer,
+          createdAt: admin.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      });
+      await batch.commit();
+    }
 
     console.log(`[Drive Sync] ✅ Sincronización exitosa para ${nickname} → ${docId} | Total: ${totalTokens} tokens de ${scannedFiles.length} archivos`);
 
