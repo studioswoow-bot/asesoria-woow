@@ -522,7 +522,10 @@ export async function POST(req: Request) {
               const isStudioTransfer = type.includes("estudio") || cleanUser.includes("estudios") || cleanUser.includes("studio") || EXCLUDED_STUDIO_USERS.includes(cleanUser);
               const isFee = type.includes("tasa") || type.includes("fee") || type.includes("proveedor") || cleanUser.includes("dreamcam") || cleanUser.includes("vr");
               
-              if (!isStudioTransfer && !isFee) {
+              // Excluir Retiro Directo (columnas vacías o numéricas) y santikdk
+              const isExcludedRecipient = cleanUser === "santikdk" || cleanUser === "" || !isNaN(Number(cleanUser)) || cleanUser.startsWith("-");
+              
+              if (!isStudioTransfer && !isFee && !isExcludedRecipient) {
                 const dateObj = new Date(txTime);
                 const dateStr = dateObj.toISOString().split('T')[0];
                 const timeStr = dateObj.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
