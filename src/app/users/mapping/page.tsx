@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, doc, updateDoc, query } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, query } from "firebase/firestore";
 import { useAuth } from "@/context/AuthContext";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { useRouter } from "next/navigation";
@@ -77,10 +77,12 @@ export default function AliasMappingPage() {
     setSaving(true);
     try {
       const docRef = doc(db, "modelos_profile_v2", editingModel.id);
-      await updateDoc(docRef, {
-        "platformAliases.Stripchat": editingModel.stripchatAliases,
-        "updatedAt": new Date().toISOString()
-      });
+      await setDoc(docRef, {
+        platformAliases: {
+          Stripchat: editingModel.stripchatAliases
+        },
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
       
       // Update local state
       setMappings(prev => prev.map(m => m.id === editingModel.id ? editingModel : m));
