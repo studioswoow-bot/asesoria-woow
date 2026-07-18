@@ -35,6 +35,7 @@ function ActionPlansContent() {
   const [goals, setGoals] = useState({ tph: 0, icj: 0, icr: 0, zscore: 0 });
   const [dailyData, setDailyData] = useState<DailyTracking[]>([]);
   const [fetchingMetrics, setFetchingMetrics] = useState(false);
+  const [targetPlatform, setTargetPlatform] = useState<string>("Global");
 
   // New Management Sections state
   const [weeklySummaries, setWeeklySummaries] = useState({
@@ -195,6 +196,7 @@ function ActionPlansContent() {
     setCurrentPlanId(plan.id);
     setSelectedModelId(plan.modelId);
     setHistory(plan.history || []);
+    setTargetPlatform(plan.targetPlatform || "Global");
     const [start, end] = plan.period.split(" a ");
     setPeriodStart(start);
     setPeriodEnd(end);
@@ -233,6 +235,7 @@ function ActionPlansContent() {
     setSelectedModelId("");
     setPeriodStart("");
     setPeriodEnd("");
+    setTargetPlatform("Global");
     setGoals({ tph: 0, icj: 100, icr: 0, zscore: 0 });
     setDailyData([]);
     setStrategicA([""]);
@@ -265,6 +268,7 @@ function ActionPlansContent() {
       modelName: selectedModelName,
       period: `${periodStart} a ${periodEnd}`,
       status: 'active',
+      targetPlatform: targetPlatform,
       goals: goals,
       dailyTracking: dailyData,
       weeklySummaries: weeklySummaries,
@@ -448,6 +452,14 @@ function ActionPlansContent() {
                           <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${plan.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-500'}`}>
                             {plan.status === 'active' ? 'Activo' : 'Completado'}
                           </span>
+                          <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${
+                            plan.targetPlatform === 'Chaturbate' ? 'bg-orange-500/20 text-orange-500' :
+                            plan.targetPlatform === 'Stripchat' ? 'bg-rose-500/20 text-rose-500' :
+                            plan.targetPlatform === 'Streamate' ? 'bg-purple-500/20 text-purple-500' :
+                            'bg-indigo-500/20 text-indigo-500'
+                          }`}>
+                            {plan.targetPlatform || 'Global'}
+                          </span>
                         </div>
                       </div>
                       <h3 className="text-lg font-bold text-text-main group-hover:text-primary transition-colors">{plan.modelName}</h3>
@@ -575,7 +587,7 @@ function ActionPlansContent() {
                     <h2 className="text-xl font-bold text-text-main">Información del Plan</h2>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-text-muted">modelo</label>
                       <select 
@@ -617,6 +629,19 @@ function ActionPlansContent() {
                         <option>Junior</option>
                         <option>Intermedio</option>
                         <option>Top</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-text-muted">Plataforma Objetivo</label>
+                      <select 
+                        value={targetPlatform}
+                        onChange={(e) => setTargetPlatform(e.target.value)}
+                        className="w-full bg-text-main/5 border border-text-main/10 rounded-xl p-3 text-text-main focus:ring-primary focus:border-primary transition-colors cursor-pointer"
+                      >
+                        <option value="Global">Global / Combinado</option>
+                        <option value="Chaturbate">Chaturbate</option>
+                        <option value="Stripchat">Stripchat</option>
+                        <option value="Streamate">Streamate</option>
                       </select>
                     </div>
                   </div>

@@ -29,6 +29,7 @@ export interface ActionPlan {
   modelName: string;
   period: string;
   status: 'active' | 'completed';
+  targetPlatform?: string;
   goals: {
     tph: number;
     icj: number;
