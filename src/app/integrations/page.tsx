@@ -33,6 +33,7 @@ export default function IntegrationsPage() {
           { name: "Gemini Copilot", desc: "Asistente de chat con IA", icon: "smart_toy", status: "Próximamente" },
           { name: "Chaturbate API", desc: "Conexión directa para tokens", icon: "stream", status: "Desconectado" },
           { name: "Stripchat API", desc: "Sincronización de estadísticas", icon: "bar_chart_4_bars", status: "Desconectado" },
+          { name: "Streamate API", desc: "Sincronización de estadísticas y logs", icon: "camera", status: "Desconectado" },
           { name: "BongaCams API", desc: "Monitor de actividad", icon: "cell_tower", status: "Desconectado" },
           { name: "Google Drive", desc: "Almacenamiento de archivos", icon: "cloud", status: "Desconectado" },
         ].map((int, i) => (

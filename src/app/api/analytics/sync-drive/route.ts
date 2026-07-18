@@ -10,7 +10,7 @@ interface SyncRequest {
   modelId: string;
   nickname: string;
   period: string; // ej. "2026-01-01_to_2026-01-15" o "2026-01-01_to_2026-03-15"
-  platform?: "Chaturbate" | "Stripchat";
+  platform?: "Chaturbate" | "Stripchat" | "Streamate";
 }
 
 export async function POST(req: Request) {
@@ -96,8 +96,8 @@ export async function POST(req: Request) {
     const periodStartTime = periodStart ? periodStart.getTime() : 0;
     const periodEndTime = periodEnd ? periodEnd.getTime() : Date.now();
 
-    // 5. Navegar la jerarquía de carpetas: Nickname/Alias → Platform (CB/SC)
-    const platformCode = platform === "Chaturbate" ? "CB" : "SC";
+    // 5. Navegar la jerarquía de carpetas: Nickname/Alias → Platform (CB/SC/SM)
+    const platformCode = platform === "Chaturbate" ? "CB" : (platform === "Stripchat" ? "SC" : "SM");
 
     // 5a. Buscar carpetas que coincidan con los nombres/aliases (Búsqueda Exacta primero)
     const allModelFolders: any[] = [];
@@ -140,10 +140,12 @@ export async function POST(req: Request) {
     for (const folder of allModelFolders) {
       if (!folder.id) continue;
       
-      // Intentar primero con el código corto (SC/CB) y luego con el nombre completo
+      // Intentar primero con el código corto (SC/CB/SM) y luego con el nombre completo
       const possiblePlatformFolders = [platformCode, platform, platform.replace(/chat/i, 'Chat'), "StripChat"];
       if (platformCode === "SC") {
           possiblePlatformFolders.push("ST");
+      } else if (platformCode === "SM") {
+          possiblePlatformFolders.push("sm", "SM", "StreamMate", "streamate");
       }
       
       let platformFiles: any[] = [];
@@ -458,22 +460,35 @@ export async function POST(req: Request) {
               normalizedRow[cleanKey] = row[key];
             });
 
-            const findValue = (patterns: string[], fallback: any = null) => {
-              const keys = Object.keys(normalizedRow);
-              // Los patrones ya deben estar en minúsculas y sin acentos para coincidir
-              const matchedKey = keys.find(k => 
-                patterns.some(p => k.includes(p.toLowerCase()))
-              );
-              return matchedKey ? normalizedRow[matchedKey] : fallback;
-            };
+             const findValue = (patterns: string[], fallback: any = null) => {
+               const keys = Object.keys(normalizedRow);
+               // 1. Coincidencia exacta primero (evita solapes como 'type' y 'transaction time')
+               const exactKey = keys.find(k => 
+                 patterns.some(p => k === p.toLowerCase())
+               );
+               if (exactKey) return normalizedRow[exactKey];
 
-            const rawTokenVal = findValue(["fichas", "token", "gross", "income", "earnings", "value", "monto"], 0);
-            const rawUser = findValue(["usuarios", "user", "tipper", "usuario", "sender", "fan", "username", "to", "recipient", "__empty"], "Unknown");
+               // 2. Coincidencia parcial después
+               const matchedKey = keys.find(k => 
+                 patterns.some(p => k.includes(p.toLowerCase()))
+               );
+               return matchedKey ? normalizedRow[matchedKey] : fallback;
+             };
+
+            const rawUser = findValue(["customer nickname", "usuarios", "user", "tipper", "usuario", "sender", "fan", "username", "to", "recipient", "__empty"], "Unknown");
             const rawType = findValue(["type", "tipo", "accion", "transaction", "category"], "");
-            const rawTimestamp = findValue(["timestamp", "fecha", "date", "creation", "time"], null);
+            const rawTimestamp = findValue(["transaction time", "timestamp", "fecha", "date", "creation", "time"], null);
             const note = String(normalizedRow["Note"] || normalizedRow["note"] || "").toLowerCase();
 
-            const tokensVal = typeof rawTokenVal === 'number' ? rawTokenVal : Number(String(rawTokenVal).replace(/[^\d.-]/g, ''));
+            let tokensVal = 0;
+            if (platform === "Streamate") {
+              const rawEarned = findValue(["performer earned", "earned"], 0);
+              const performerEarned = typeof rawEarned === 'number' ? rawEarned : Number(String(rawEarned).replace(/[^\d.-]/g, ''));
+              tokensVal = performerEarned * 20; // 1 USD = 20 Tokens
+            } else {
+              const rawTokenVal = findValue(["fichas", "token", "gross", "income", "earnings", "value", "monto"], 0);
+              tokensVal = typeof rawTokenVal === 'number' ? rawTokenVal : Number(String(rawTokenVal).replace(/[^\d.-]/g, ''));
+            }
             
             // Normalización ROBUSTA de usuario (quita acentos, emojis invisible, BOMs mal leídos, etc)
             const username = String(rawUser)
@@ -558,7 +573,7 @@ export async function POST(req: Request) {
               if (type.includes("spy") || type.includes("espia") || note.includes("spy") || note.includes("espia")) {
                  incomeConcepts.spy += absTokens;
                  privateTokens += absTokens; // spy is technically private
-              } else if (type.includes("private") || type.includes("pm") || type.includes("privada") || type.includes("privado") || type.includes("pvt") || note.includes("private") || note.includes("privado") || type.includes("espiando")) {
+              } else if (type.includes("private") || type.includes("exclusive") || type.includes("exclusivo") || type.includes("pm") || type.includes("privada") || type.includes("privado") || type.includes("pvt") || note.includes("private") || note.includes("privado") || type.includes("espiando")) {
                  incomeConcepts.private += absTokens;
                  privateTokens += absTokens;
               } else if (type.includes("video") || note.includes("video") || note.includes("vdo")) {
@@ -691,7 +706,7 @@ export async function POST(req: Request) {
             if (t > topHour.tokens) topHour = { hour: h, tokens: t };
           });
         }
-        const platformSuffix = platform === "Chaturbate" ? "CB" : "SC";
+        const platformSuffix = platform === "Chaturbate" ? "CB" : (platform === "Stripchat" ? "SC" : "SM");
         return {
           name: `${name} (${platformSuffix})`,
           tokens,

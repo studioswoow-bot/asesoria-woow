@@ -12,6 +12,7 @@ interface ModelMapping {
   realName: string;
   primaryNickname: string;
   stripchatAliases: string[];
+  streamateAliases: string[];
   camsodaAliases: string[];
 }
 
@@ -24,6 +25,7 @@ export default function AliasMappingPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingModel, setEditingModel] = useState<ModelMapping | null>(null);
   const [newAlias, setNewAlias] = useState("");
+  const [newSmAlias, setNewSmAlias] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function AliasMappingPage() {
             realName: pData?.realName || mData.name || "Sin nombre",
             primaryNickname: mData.nickname || "sin_apodo",
             stripchatAliases: pData?.platformAliases?.Stripchat || [],
+            streamateAliases: pData?.platformAliases?.Streamate || [],
             camsodaAliases: pData?.platformAliases?.Camsoda || []
           };
         });
@@ -79,7 +82,8 @@ export default function AliasMappingPage() {
       const docRef = doc(db, "modelos_profile_v2", editingModel.id);
       await setDoc(docRef, {
         platformAliases: {
-          Stripchat: editingModel.stripchatAliases
+          Stripchat: editingModel.stripchatAliases,
+          Streamate: editingModel.streamateAliases || []
         },
         updatedAt: new Date().toISOString()
       }, { merge: true });
@@ -131,6 +135,7 @@ export default function AliasMappingPage() {
               <th className="px-8 py-5">Identidad (Nombre Real)</th>
               <th className="px-8 py-5">Nickname Principal (CB)</th>
               <th className="px-8 py-5">Apodos Stripchat</th>
+              <th className="px-8 py-5">Apodos Streamate</th>
               <th className="px-8 py-5 text-right">Acciones</th>
             </tr>
           </thead>
@@ -149,7 +154,16 @@ export default function AliasMappingPage() {
                       <span key={alias} className="px-2 py-1 bg-primary/10 text-primary border border-primary/20 rounded-md text-[10px] font-bold">
                         {alias}
                       </span>
-                    )) : <span className="text-text-muted italic text-[10px]">Sin alias configurados</span>}
+                    )) : <span className="text-text-muted italic text-[10px]">Sin alias</span>}
+                  </div>
+                </td>
+                <td className="px-8 py-6">
+                  <div className="flex gap-2 flex-wrap">
+                    {m.streamateAliases?.length > 0 ? m.streamateAliases.map(alias => (
+                      <span key={alias} className="px-2 py-1 bg-purple-500/10 text-purple-500 border border-purple-500/20 rounded-md text-[10px] font-bold">
+                        {alias}
+                      </span>
+                    )) : <span className="text-text-muted italic text-[10px]">Sin alias</span>}
                   </div>
                 </td>
                 <td className="px-8 py-6 text-right">
@@ -189,7 +203,7 @@ export default function AliasMappingPage() {
                 <div className="flex gap-2">
                   <input 
                     type="text" 
-                    placeholder="Nuevo apodo (ej: SWEET_KITTY_01)" 
+                    placeholder="Nuevo apodo Stripchat (ej: SWEET_KITTY_01)" 
                     value={newAlias}
                     onChange={(e) => setNewAlias(e.target.value)}
                     className="flex-1 px-4 py-3 bg-background-dark border border-text-main/10 rounded-xl text-text-main focus:outline-none focus:ring-2 focus:ring-primary h-[48px] placeholder:text-text-muted/50"
@@ -199,6 +213,40 @@ export default function AliasMappingPage() {
                         if (newAlias && !editingModel.stripchatAliases.includes(newAlias)) {
                             setEditingModel({...editingModel, stripchatAliases: [...editingModel.stripchatAliases, newAlias]});
                             setNewAlias("");
+                        }
+                    }}
+                    className="p-3 bg-accent-gold text-background-dark font-black rounded-xl hover:scale-105 transition-all text-xs uppercase"
+                  >
+                    Añadir
+                  </button>
+                </div>
+              </div>
+
+              <div className="bg-text-main/5 p-6 rounded-2xl border border-text-main/10">
+                <label className="text-[10px] font-black text-text-muted uppercase tracking-widest block mb-4">Alias en Streamate</label>
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {(editingModel.streamateAliases || []).map(alias => (
+                    <div key={alias} className="flex items-center gap-2 bg-purple-500/20 text-purple-500 px-3 py-1.5 rounded-xl border border-purple-500/20">
+                      <span className="text-xs font-bold font-mono">{alias}</span>
+                      <button onClick={() => setEditingModel({...editingModel, streamateAliases: (editingModel.streamateAliases || []).filter(a => a !== alias)})}>
+                        <span className="material-symbols-outlined text-[14px]">close</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Nuevo apodo Streamate (ej: Sara_Love_1)" 
+                    value={newSmAlias}
+                    onChange={(e) => setNewSmAlias(e.target.value)}
+                    className="flex-1 px-4 py-3 bg-background-dark border border-text-main/10 rounded-xl text-text-main focus:outline-none focus:ring-2 focus:ring-purple-500 h-[48px] placeholder:text-text-muted/50"
+                  />
+                  <button 
+                    onClick={() => {
+                        if (newSmAlias && !(editingModel.streamateAliases || []).includes(newSmAlias)) {
+                            setEditingModel({...editingModel, streamateAliases: [...(editingModel.streamateAliases || []), newSmAlias]});
+                            setNewSmAlias("");
                         }
                     }}
                     className="p-3 bg-accent-gold text-background-dark font-black rounded-xl hover:scale-105 transition-all text-xs uppercase"

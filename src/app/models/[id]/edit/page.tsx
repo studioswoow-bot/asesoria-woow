@@ -59,7 +59,7 @@ export default function ModelEditPage() {
   });
   
   const [platformCredentials, setPlatformCredentials] = useState<{[key: string]: { apiKey: string, username: string, apiSecret?: string }}>({});
-  const [platformAliases, setPlatformAliases] = useState<{[key: string]: string[]}>({ "Chaturbate": [], "Stripchat": [] });
+  const [platformAliases, setPlatformAliases] = useState<{[key: string]: string[]}>({ "Chaturbate": [], "Stripchat": [], "Streamate": [] });
   const [apiEnabledPlatforms, setApiEnabledPlatforms] = useState<string[]>([]);
   const [physicalAttributes, setPhysicalAttributes] = useState<{[key: string]: string}>({});
   const [activeDefinition, setActiveDefinition] = useState<GlossaryItem | null>(null);
@@ -68,7 +68,7 @@ export default function ModelEditPage() {
   const [activeOutfit, setActiveOutfit] = useState<OutfitItem | null>(null);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [newAliasInputs, setNewAliasInputs] = useState<{[key: string]: string}>({ "Chaturbate": "", "Stripchat": "" });
+  const [newAliasInputs, setNewAliasInputs] = useState<{[key: string]: string}>({ "Chaturbate": "", "Stripchat": "", "Streamate": "" });
 
   useEffect(() => {
     async function loadModelData() {

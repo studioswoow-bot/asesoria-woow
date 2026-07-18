@@ -148,28 +148,33 @@ export default function QuincenaComparison({ modelId, modelName }: QuincenaCompa
           // 2. Fetch Cache Data from Firestore (Combined platforms)
           const cacheCbId = `${modelId}_${q.period}_Chaturbate`;
           const cacheScId = `${modelId}_${q.period}_Stripchat`;
+          const cacheSmId = `${modelId}_${q.period}_Streamate`;
           
-          const [cbSnap, scSnap] = await Promise.all([
+          const [cbSnap, scSnap, smSnap] = await Promise.all([
             getDoc(doc(db, "modelos_analytics_cache_v2", cacheCbId)),
-            getDoc(doc(db, "modelos_analytics_cache_v2", cacheScId))
+            getDoc(doc(db, "modelos_analytics_cache_v2", cacheScId)),
+            getDoc(doc(db, "modelos_analytics_cache_v2", cacheSmId))
           ]);
 
           const cbData = cbSnap.exists() ? cbSnap.data() : null;
           const scData = scSnap.exists() ? scSnap.data() : null;
+          const smData = smSnap.exists() ? smSnap.data() : null;
 
-          const rankCands = [cbData?.best_rank, scData?.best_rank].filter(r => r != null && r > 0 && isFinite(r));
+          const rankCands = [cbData?.best_rank, scData?.best_rank, smData?.best_rank].filter(r => r != null && r > 0 && isFinite(r));
           const bestRank = rankCands.length > 0 ? Math.min(...rankCands) : 0;
-          const grankCands = [cbData?.best_grank, scData?.best_grank].filter(r => r != null && r > 0 && isFinite(r));
+          const grankCands = [cbData?.best_grank, scData?.best_grank, smData?.best_grank].filter(r => r != null && r > 0 && isFinite(r));
           const bestGrank = grankCands.length > 0 ? Math.min(...grankCands) : 0;
-          const followers = Math.max(cbData?.followers_current || 0, scData?.followers_current || 0);
+          const followers = Math.max(cbData?.followers_current || 0, scData?.followers_current || 0, smData?.followers_current || 0);
           // follower_growth: use stored field first, fallback to history delta
-          let followerGrowth = (cbData?.follower_growth || 0) + (scData?.follower_growth || 0);
+          let followerGrowth = (cbData?.follower_growth || 0) + (scData?.follower_growth || 0) + (smData?.follower_growth || 0);
           if (followerGrowth === 0) {
             const cbHist = (cbData?.history || []).sort((a: any, b: any) => a.date.localeCompare(b.date));
             const scHist = (scData?.history || []).sort((a: any, b: any) => a.date.localeCompare(b.date));
+            const smHist = (smData?.history || []).sort((a: any, b: any) => a.date.localeCompare(b.date));
             const cbDelta = cbHist.length >= 2 ? Math.max(0, (cbHist[cbHist.length-1]?.followers || 0) - (cbHist[0]?.followers || 0)) : 0;
             const scDelta = scHist.length >= 2 ? Math.max(0, (scHist[scHist.length-1]?.followers || 0) - (scHist[0]?.followers || 0)) : 0;
-            followerGrowth = cbDelta + scDelta;
+            const smDelta = smHist.length >= 2 ? Math.max(0, (smHist[smHist.length-1]?.followers || 0) - (smHist[0]?.followers || 0)) : 0;
+            followerGrowth = cbDelta + scDelta + smDelta;
           }
 
           return {

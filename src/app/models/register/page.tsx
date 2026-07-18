@@ -64,8 +64,8 @@ export default function ModelRegistrationPage() {
   const [activeHashtag, setActiveHashtag] = useState<HashtagItem | null>(null);
   const [activeOutfit, setActiveOutfit] = useState<OutfitItem | null>(null);
   const [apiEnabledPlatforms, setApiEnabledPlatforms] = useState<string[]>([]);
-  const [platformAliases, setPlatformAliases] = useState<{[key: string]: string[]}>({ "Chaturbate": [], "Stripchat": [] });
-  const [newAliasInputs, setNewAliasInputs] = useState<{[key: string]: string}>({ "Chaturbate": "", "Stripchat": "" });
+  const [platformAliases, setPlatformAliases] = useState<{[key: string]: string[]}>({ "Chaturbate": [], "Stripchat": [], "Streamate": [] });
+  const [newAliasInputs, setNewAliasInputs] = useState<{[key: string]: string}>({ "Chaturbate": "", "Stripchat": "", "Streamate": "" });
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [existingModels, setExistingModels] = useState<any[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(true);

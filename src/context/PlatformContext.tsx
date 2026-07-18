@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 const DEFAULT_PLATFORMS = [
   "Chaturbate", "CAM4", "CamSoda", "Stripchat", "Bongacams", 
   "Dreamcam", "MyFreecams", "Amateur", "LiveJasmin", 
-  "SkyPrivate", "streamate", "Xlove"
+  "SkyPrivate", "Streamate", "Xlove"
 ];
 
 interface PlatformContextType {

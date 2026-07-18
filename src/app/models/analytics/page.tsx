@@ -48,10 +48,11 @@ function AnalyticsContent() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [modelData, setModelData] = useState<any>(null);
-  const [activeTab, setActiveTab] = useState<"Chaturbate" | "Stripchat" | "Combined" | "Comparison">("Chaturbate");
+  const [activeTab, setActiveTab] = useState<"Chaturbate" | "Stripchat" | "Streamate" | "Combined" | "Comparison">("Chaturbate");
 
   const [cbMetrics, setCbMetrics] = useState<any>(null);
   const [scMetrics, setScMetrics] = useState<any>(null);
+  const [smMetrics, setSmMetrics] = useState<any>(null);
 
   const [globalMetrics, setGlobalMetrics] = useState<any>(null);
   const [loadingGlobal, setLoadingGlobal] = useState(false);
@@ -107,6 +108,7 @@ function AnalyticsContent() {
     if (!id) return;
     const cacheDocCbId = `${id}_${period}_Chaturbate`;
     const cacheDocScId = `${id}_${period}_Stripchat`;
+    const cacheDocSmId = `${id}_${period}_Streamate`;
 
     const unsubCb = onSnapshot(doc(db, "modelos_analytics_cache_v2", cacheDocCbId), (snap) => {
        setCbMetrics(snap.exists() ? snap.data() : null);
@@ -116,27 +118,34 @@ function AnalyticsContent() {
        setScMetrics(snap.exists() ? snap.data() : null);
     });
 
+    const unsubSm = onSnapshot(doc(db, "modelos_analytics_cache_v2", cacheDocSmId), (snap) => {
+       setSmMetrics(snap.exists() ? snap.data() : null);
+    });
+
     return () => {
        unsubCb();
        unsubSc();
+       unsubSm();
     };
   }, [id, period]);
 
   const getCombinedMetrics = () => {
-    if (!cbMetrics && !scMetrics) return null;
+    if (!cbMetrics && !scMetrics && !smMetrics) return null;
     const cb = cbMetrics || { total_tokens: 0, usd_earnings: 0, new_followers: 0, tph: 0, icr: 0, platform_total_hours: 0, history: [] };
     const sc = scMetrics || { total_tokens: 0, usd_earnings: 0, new_followers: 0, tph: 0, icr: 0, platform_total_hours: 0, history: [] };
+    const sm = smMetrics || { total_tokens: 0, usd_earnings: 0, new_followers: 0, tph: 0, icr: 0, platform_total_hours: 0, history: [] };
     
     const tippersMap: any = {};
     const tippersDetailsMap: any = {};
     
     const addSuffix = (name: string, suffix: string) => {
-       if (name.includes(' (CB)') || name.includes(' (SC)')) return name;
+       if (name.includes(' (CB)') || name.includes(' (SC)') || name.includes(' (SM)')) return name;
        return `${name} (${suffix})`;
     };
 
     [...(cb.top_tippers||[]).map((t:any) => ({...t, name: addSuffix(t.name, "CB")})), 
-     ...(sc.top_tippers||[]).map((t:any) => ({...t, name: addSuffix(t.name, "SC")}))].forEach(t => {
+     ...(sc.top_tippers||[]).map((t:any) => ({...t, name: addSuffix(t.name, "SC")})),
+     ...(sm.top_tippers||[]).map((t:any) => ({...t, name: addSuffix(t.name, "SM")}))].forEach(t => {
        tippersMap[t.name] = (tippersMap[t.name] || 0) + (Number(t.tokens)||0);
        
        if (t.details) {
@@ -167,7 +176,7 @@ function AnalyticsContent() {
     }).sort((a:any,b:any) => b.tokens - a.tokens).slice(0,10);
   
     const hourlyMap: any = {};
-    [...(cb.hourly_distribution||[]), ...(sc.hourly_distribution||[])].forEach(h => {
+    [...(cb.hourly_distribution||[]), ...(sc.hourly_distribution||[]), ...(sm.hourly_distribution||[])].forEach(h => {
        if(!hourlyMap[h.hour]) hourlyMap[h.hour] = { hour: h.hour, tokens: 0, users: 0, avg_viewers: 0 };
        hourlyMap[h.hour].tokens += h.tokens;
        hourlyMap[h.hour].users += h.users; 
@@ -181,26 +190,29 @@ function AnalyticsContent() {
       if(h.tokens > peak_tokens) { peak_tokens = h.tokens; peak_hour = h.hour; }
     });
   
-    const rankCandidates = [cb.best_rank, sc.best_rank].filter(r => r != null && r > 0 && isFinite(r));
+    const rankCandidates = [cb.best_rank, sc.best_rank, sm.best_rank].filter(r => r != null && r > 0 && isFinite(r));
     const combinedBestRank = rankCandidates.length > 0 ? Math.min(...rankCandidates) : 0;
     let combinedRankDetails = null;
     if (combinedBestRank > 0) {
        if (combinedBestRank === cb.best_rank) combinedRankDetails = cb.best_rank_details;
-       else combinedRankDetails = sc.best_rank_details;
+       else if (combinedBestRank === sc.best_rank) combinedRankDetails = sc.best_rank_details;
+       else combinedRankDetails = sm.best_rank_details;
     }
 
-    const grankCandidates = [cb.best_grank, sc.best_grank].filter(r => r != null && r > 0 && isFinite(r));
+    const grankCandidates = [cb.best_grank, sc.best_grank, sm.best_grank].filter(r => r != null && r > 0 && isFinite(r));
     const combinedBestGrank = grankCandidates.length > 0 ? Math.min(...grankCandidates) : 0;
     let combinedGrankDetails = null;
     if (combinedBestGrank > 0) {
        if (combinedBestGrank === cb.best_grank) combinedGrankDetails = cb.best_grank_details;
-       else combinedGrankDetails = sc.best_grank_details;
+       else if (combinedBestGrank === sc.best_grank) combinedGrankDetails = sc.best_grank_details;
+       else combinedGrankDetails = sm.best_grank_details;
     }
 
     // Merge history
     const historyMap: Record<string, any> = {};
     const cbHistory = [...(cb.history || [])].sort((a: any, b: any) => a.date.localeCompare(b.date));
     const scHistory = [...(sc.history || [])].sort((a: any, b: any) => a.date.localeCompare(b.date));
+    const smHistory = [...(sm.history || [])].sort((a: any, b: any) => a.date.localeCompare(b.date));
     
     const cbWithDelta = cbHistory.map((d: any, index: number, arr: any[]) => ({
        ...d, 
@@ -212,11 +224,16 @@ function AnalyticsContent() {
        new_followers: index === 0 ? 0 : Math.max(0, (d.followers || 0) - (arr[index - 1].followers || 0))
     }));
 
-    [...cbWithDelta, ...scWithDelta].forEach((entry: any) => {
+    const smWithDelta = smHistory.map((d: any, index: number, arr: any[]) => ({
+       ...d, 
+       new_followers: index === 0 ? 0 : Math.max(0, (d.followers || 0) - (arr[index - 1].followers || 0))
+    }));
+
+    [...cbWithDelta, ...scWithDelta, ...smWithDelta].forEach((entry: any) => {
         if (!historyMap[entry.date]) {
             historyMap[entry.date] = { date: entry.date, followers: 0, new_followers: 0, rank: 999999, grank: 999999 };
         }
-        historyMap[entry.date].followers += (entry.followers || 0); // Keep absolute sum mapping just in case
+        historyMap[entry.date].followers += (entry.followers || 0);
         historyMap[entry.date].new_followers += (entry.new_followers || 0);
         if (entry.rank && entry.rank < historyMap[entry.date].rank) historyMap[entry.date].rank = entry.rank;
         if (entry.grank && entry.grank < historyMap[entry.date].grank) historyMap[entry.date].grank = entry.grank;
@@ -237,16 +254,18 @@ function AnalyticsContent() {
 
     const cbSchedule = cb.schedule_matrix || [];
     const scSchedule = sc.schedule_matrix || [];
+    const smSchedule = sm.schedule_matrix || [];
 
     for (let d = 0; d < 7; d++) {
         for (let h = 0; h < 24; h++) {
             const cbCell = cbSchedule[d]?.hours?.[h] || { online_snapshots: 0, tokens: 0, average_viewers: 0, viewers_sum: 0 };
             const scCell = scSchedule[d]?.hours?.[h] || { online_snapshots: 0, tokens: 0, average_viewers: 0, viewers_sum: 0 };
+            const smCell = smSchedule[d]?.hours?.[h] || { online_snapshots: 0, tokens: 0, average_viewers: 0, viewers_sum: 0 };
             combinedScheduleMatrix[d].hours[h] = {
                 hour: h,
-                online_snapshots: cbCell.online_snapshots + scCell.online_snapshots,
-                tokens: cbCell.tokens + scCell.tokens,
-                viewers_sum: cbCell.viewers_sum + scCell.viewers_sum,
+                online_snapshots: cbCell.online_snapshots + scCell.online_snapshots + smCell.online_snapshots,
+                tokens: cbCell.tokens + scCell.tokens + smCell.tokens,
+                viewers_sum: cbCell.viewers_sum + scCell.viewers_sum + smCell.viewers_sum,
                 average_viewers: 0
             };
             if (combinedScheduleMatrix[d].hours[h].online_snapshots > 0) {
@@ -255,9 +274,9 @@ function AnalyticsContent() {
         }
     }
 
-    const total_tokens = (cb.total_tokens||0) + (sc.total_tokens||0);
-    const platform_total_hours = (cb.platform_total_hours||0) + (sc.platform_total_hours||0);
-    const expectedHoursMensual = globalMetrics?.expectedHoursMensual || 120; // fallback if globalMetrics not ready
+    const total_tokens = (cb.total_tokens||0) + (sc.total_tokens||0) + (sm.total_tokens||0);
+    const platform_total_hours = (cb.platform_total_hours||0) + (sc.platform_total_hours||0) + (sm.platform_total_hours||0);
+    const expectedHoursMensual = globalMetrics?.expectedHoursMensual || 120;
     const tph = platform_total_hours > 0 ? total_tokens / platform_total_hours : 0;
     const icj = expectedHoursMensual > 0 ? (platform_total_hours / expectedHoursMensual) * 100 : 0;
     const icr = tph * (icj / 100);
@@ -268,19 +287,19 @@ function AnalyticsContent() {
       tph: Number(tph.toFixed(2)),
       icj: Number(icj.toFixed(1)),
       icr: Number(icr.toFixed(2)),
-      tip_tokens: (cb.tip_tokens||0) + (sc.tip_tokens||0),
-      private_tokens: (cb.private_tokens||0) + (sc.private_tokens||0),
+      tip_tokens: (cb.tip_tokens||0) + (sc.tip_tokens||0) + (sm.tip_tokens||0),
+      private_tokens: (cb.private_tokens||0) + (sc.private_tokens||0) + (sm.private_tokens||0),
       income_concepts: {
-        private: (cb.income_concepts?.private||0) + (sc.income_concepts?.private||0),
-        spy: (cb.income_concepts?.spy||0) + (sc.income_concepts?.spy||0),
-        public: (cb.income_concepts?.public||0) + (sc.income_concepts?.public||0),
-        videos: (cb.income_concepts?.videos||0) + (sc.income_concepts?.videos||0),
-        photos: (cb.income_concepts?.photos||0) + (sc.income_concepts?.photos||0),
-        other: (cb.income_concepts?.other||0) + (sc.income_concepts?.other||0),
+        private: (cb.income_concepts?.private||0) + (sc.income_concepts?.private||0) + (sm.income_concepts?.private||0),
+        spy: (cb.income_concepts?.spy||0) + (sc.income_concepts?.spy||0) + (sm.income_concepts?.spy||0),
+        public: (cb.income_concepts?.public||0) + (sc.income_concepts?.public||0) + (sm.income_concepts?.public||0),
+        videos: (cb.income_concepts?.videos||0) + (sc.income_concepts?.videos||0) + (sm.income_concepts?.videos||0),
+        photos: (cb.income_concepts?.photos||0) + (sc.income_concepts?.photos||0) + (sm.income_concepts?.photos||0),
+        other: (cb.income_concepts?.other||0) + (sc.income_concepts?.other||0) + (sm.income_concepts?.other||0),
       },
       intents: {
-        privates: (cb.intents?.privates||0) + (sc.intents?.privates||0),
-        requestedVideo: (cb.intents?.requestedVideo||0) + (sc.intents?.requestedVideo||0)
+        privates: (cb.intents?.privates||0) + (sc.intents?.privates||0) + (sm.intents?.privates||0),
+        requestedVideo: (cb.intents?.requestedVideo||0) + (sc.intents?.requestedVideo||0) + (sm.intents?.requestedVideo||0)
       },
       top_tippers,
       hourly_distribution,
@@ -289,16 +308,16 @@ function AnalyticsContent() {
       best_rank_details: combinedRankDetails,
       best_grank: combinedBestGrank,
       best_grank_details: combinedGrankDetails,
-      follower_growth: (cb.follower_growth||0) + (sc.follower_growth||0),
-      followers_current: Math.max(...[cb.followers_current, sc.followers_current].filter(f => f > 0)) || 0,
+      follower_growth: (cb.follower_growth||0) + (sc.follower_growth||0) + (sm.follower_growth||0),
+      followers_current: Math.max(...[cb.followers_current, sc.followers_current, sm.followers_current].filter(f => f > 0)) || 0,
       history: combinedHistory,
       schedule_matrix: combinedScheduleMatrix,
-      synced_at: cb.synced_at || sc.synced_at || new Date().toISOString()
+      synced_at: cb.synced_at || sc.synced_at || sm.synced_at || new Date().toISOString()
     };
   };
 
   // For Comparison tab, show combined metrics in the supplementary cards
-  const metrics = activeTab === "Chaturbate" ? cbMetrics : (activeTab === "Stripchat" ? scMetrics : getCombinedMetrics());
+  const metrics = activeTab === "Chaturbate" ? cbMetrics : (activeTab === "Stripchat" ? scMetrics : (activeTab === "Streamate" ? smMetrics : getCombinedMetrics()));
   const evolutionData = metrics?.history || [];
 
   const handleManualSync = async () => {
@@ -308,7 +327,7 @@ function AnalyticsContent() {
       const token = await user.getIdToken();
       const nickname = modelData.nickname || modelData.name;
 
-      const platformsToSync = activeTab === "Combined" ? ["Chaturbate", "Stripchat"] : [activeTab];
+      const platformsToSync = (activeTab === "Combined" || activeTab === "Comparison") ? ["Chaturbate", "Stripchat", "Streamate"] : [activeTab];
 
       for (const platform of platformsToSync) {
         const response = await fetch('/api/analytics/sync-drive', {
@@ -346,8 +365,8 @@ function AnalyticsContent() {
   const rawTopUsers = (metrics?.top_tippers || []);
   const topUsers = rawTopUsers
     .map((u: any) => {
-      if (u.name?.includes(' (CB)') || u.name?.includes(' (SC)')) return u;
-      const suffix = activeTab === "Chaturbate" ? "(CB)" : (activeTab === "Stripchat" ? "(SC)" : "");
+      if (u.name?.includes(' (CB)') || u.name?.includes(' (SC)') || u.name?.includes(' (SM)')) return u;
+      const suffix = activeTab === "Chaturbate" ? "(CB)" : (activeTab === "Stripchat" ? "(SC)" : (activeTab === "Streamate" ? "(SM)" : ""));
       return { ...u, name: suffix ? `${u.name} ${suffix}` : u.name };
     })
     .filter((u: any) => {
@@ -454,10 +473,16 @@ function AnalyticsContent() {
              <span className="material-symbols-outlined text-[18px]">favorite</span> Stripchat
           </button>
           <button
+             onClick={() => setActiveTab("Streamate")}
+             className={`px-8 py-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${activeTab === "Streamate" ? "text-purple-500 border-purple-500" : "text-slate-500 border-transparent hover:text-purple-500"}`}
+          >
+             <span className="material-symbols-outlined text-[18px]">camera</span> Streamate
+          </button>
+          <button
              onClick={() => setActiveTab("Combined")}
              className={`px-8 py-4 font-bold text-sm transition-all border-b-2 flex items-center gap-2 ${activeTab === "Combined" ? "text-indigo-500 border-indigo-500" : "text-slate-500 border-transparent hover:text-indigo-500"}`}
           >
-             <span className="material-symbols-outlined text-[18px]">donut_large</span> Combinado (Ambas)
+             <span className="material-symbols-outlined text-[18px]">donut_large</span> Combinado (Todas)
           </button>
            <button
               onClick={() => setActiveTab("Comparison")}
@@ -621,7 +646,7 @@ function AnalyticsContent() {
       )}
 
       {activeTab === "Combined" && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           <div className="p-6 bg-primary/5 border border-primary/20 rounded-3xl flex items-center justify-between">
              <div>
                 <p className="text-[10px] uppercase tracking-widest text-primary font-black mb-1">Aporte Chaturbate</p>
@@ -638,6 +663,15 @@ function AnalyticsContent() {
              </div>
              <div className="size-12 rounded-xl bg-rose-500/20 flex items-center justify-center text-rose-500">
                 <span className="material-symbols-outlined font-bold">favorite</span>
+             </div>
+          </div>
+          <div className="p-6 bg-purple-500/5 border border-purple-500/20 rounded-3xl flex items-center justify-between">
+             <div>
+                <p className="text-[10px] uppercase tracking-widest text-purple-500 font-black mb-1">Aporte Streamate</p>
+                <h4 className="text-3xl font-black text-slate-900 dark:text-white">{smMetrics?.total_tokens?.toLocaleString() || 0} TK</h4>
+             </div>
+             <div className="size-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-500">
+                <span className="material-symbols-outlined font-bold">camera</span>
              </div>
           </div>
       </div>

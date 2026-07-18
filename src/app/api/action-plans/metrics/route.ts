@@ -225,27 +225,30 @@ export async function GET(req: NextRequest) {
       const expectedHoursMensual = businessDays * 6; // 6 horas obligatorias por día hábil
 
       // FALLBACK DE HORAS Y TOKENS DESDE CACHÉ DE PLATAFORMA
-      // Si no hay registro en work_hours o daily_metrics, usar la caché de Drive (Chaturbate/Stripchat)
+      // Si no hay registro en work_hours o daily_metrics, usar la caché de Drive (Chaturbate/Stripchat/Streamate)
       const periodKey = `${startDate}_to_${endDate}`;
       
       if (totalHours === 0 || totalTokens === 0) {
         try {
-          const [scCacheDoc, cbCacheDoc] = await Promise.all([
+          const [scCacheDoc, cbCacheDoc, smCacheDoc] = await Promise.all([
             adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${periodKey}_Stripchat`).get(),
             adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${periodKey}_Chaturbate`).get(),
+            adminDb.collection("modelos_analytics_cache_v2").doc(`${modelId}_${periodKey}_Streamate`).get(),
           ]);
 
           const scData = scCacheDoc.exists ? scCacheDoc.data() : null;
           const cbData = cbCacheDoc.exists ? cbCacheDoc.data() : null;
+          const smData = smCacheDoc.exists ? smCacheDoc.data() : null;
 
           // Fallback de horas
           if (totalHours === 0) {
             const scHours = scData?.platform_total_hours || 0;
             const cbHours = cbData?.platform_total_hours || 0;
-            const cacheHours = scHours + cbHours;
+            const smHours = smData?.platform_total_hours || 0;
+            const cacheHours = scHours + cbHours + smHours;
             if (cacheHours > 0) {
               totalHours = cacheHours;
-              console.log(`[MetricsAPI] Fallback horas desde caché: SC=${scHours}h + CB=${cbHours}h = ${totalHours}h`);
+              console.log(`[MetricsAPI] Fallback horas desde caché: SC=${scHours}h + CB=${cbHours}h + SM=${smHours}h = ${totalHours}h`);
             }
           }
 
@@ -253,10 +256,11 @@ export async function GET(req: NextRequest) {
           if (totalTokens === 0) {
             const scTokens = scData?.total_tokens || 0;
             const cbTokens = cbData?.total_tokens || 0;
-            const cacheTokens = scTokens + cbTokens;
+            const smTokens = smData?.total_tokens || 0;
+            const cacheTokens = scTokens + cbTokens + smTokens;
             if (cacheTokens > 0) {
               totalTokens = cacheTokens;
-              console.log(`[MetricsAPI] Fallback tokens desde caché: SC=${scTokens} + CB=${cbTokens} = ${totalTokens}`);
+              console.log(`[MetricsAPI] Fallback tokens desde caché: SC=${scTokens} + CB=${cbTokens} + SM=${smTokens} = ${totalTokens}`);
             }
           }
         } catch (e) {

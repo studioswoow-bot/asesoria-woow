@@ -57,6 +57,11 @@ export interface ActionPlan {
       tokensPer15Min: number;
       followerBaseTarget: number;
     };
+    streamate?: {
+      averageViewersTarget: number;
+      tokensPer15Min: number;
+      followerBaseTarget: number;
+    };
     actionItems: string[];
   };
   evaluation: {

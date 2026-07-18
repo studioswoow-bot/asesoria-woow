@@ -51,6 +51,7 @@ function ActionPlansContent() {
   const [rankPositioning, setRankPositioning] = useState({
     chaturbate: { activeViewersTarget: 0, tippingDensityTarget: 0, newFollowersTarget: 0, streamStabilityHours: 4 },
     stripchat: { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
+    streamate: { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
     actionItems: [""] as string[]
   });
 
@@ -218,10 +219,11 @@ function ActionPlansContent() {
       decisions: [],
       finalComments: ""
     });
-    setRankPositioning(plan.rankPositioningPlan || {
-      chaturbate: { activeViewersTarget: 0, tippingDensityTarget: 0, newFollowersTarget: 0, streamStabilityHours: 4 },
-      stripchat: { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
-      actionItems: [""]
+    setRankPositioning({
+      chaturbate: plan.rankPositioningPlan?.chaturbate || { activeViewersTarget: 0, tippingDensityTarget: 0, newFollowersTarget: 0, streamStabilityHours: 4 },
+      stripchat: plan.rankPositioningPlan?.stripchat || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
+      streamate: plan.rankPositioningPlan?.streamate || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
+      actionItems: plan.rankPositioningPlan?.actionItems || [""]
     });
     setView('detail');
   };
@@ -249,6 +251,7 @@ function ActionPlansContent() {
     setRankPositioning({
       chaturbate: { activeViewersTarget: 0, tippingDensityTarget: 0, newFollowersTarget: 0, streamStabilityHours: 4 },
       stripchat: { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
+      streamate: { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
       actionItems: [""]
     });
     setView('create');
@@ -273,6 +276,7 @@ function ActionPlansContent() {
       rankPositioningPlan: {
         chaturbate: rankPositioning.chaturbate,
         stripchat: rankPositioning.stripchat,
+        streamate: rankPositioning.streamate || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 },
         actionItems: rankPositioning.actionItems.filter(t => t.trim() !== ""),
       },
       evaluation: evaluation,
@@ -1062,7 +1066,7 @@ function ActionPlansContent() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                  <div className="grid grid-cols-1 xl:grid-cols-3 lg:grid-cols-2 gap-8 mb-8">
                     {/* Chaturbate Metrics */}
                     <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
                       <div className="flex items-center gap-2 mb-4 text-orange-500">
@@ -1140,6 +1144,43 @@ function ActionPlansContent() {
                             type="number"
                             value={rankPositioning.stripchat.followerBaseTarget || ""}
                             onChange={(e) => setRankPositioning({...rankPositioning, stripchat: {...rankPositioning.stripchat, followerBaseTarget: parseInt(e.target.value) || 0}})}
+                            className="w-full bg-slate-900 border border-white/10 p-2 rounded text-sm text-white focus:outline-none focus:border-accent-gold"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Streamate Metrics */}
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
+                      <div className="flex items-center gap-2 mb-4 text-purple-500">
+                        <span className="material-symbols-outlined">camera</span>
+                        <h3 className="font-bold uppercase tracking-wider">Streamate (Regresión)</h3>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-slate-400" title="Variable mayoritaria de impacto">Prom. Viewers Target</label>
+                          <input 
+                            type="number"
+                            value={rankPositioning.streamate?.averageViewersTarget || ""}
+                            onChange={(e) => setRankPositioning({...rankPositioning, streamate: {...(rankPositioning.streamate || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 }), averageViewersTarget: parseInt(e.target.value) || 0}})}
+                            className="w-full bg-slate-900 border border-white/10 p-2 rounded text-sm text-white focus:outline-none focus:border-accent-gold"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase font-bold text-slate-400" title="Ventana de memoria: Tokens sumados últimos 15 min">Tokens / 15 min Target</label>
+                          <input 
+                            type="number"
+                            value={rankPositioning.streamate?.tokensPer15Min || ""}
+                            onChange={(e) => setRankPositioning({...rankPositioning, streamate: {...(rankPositioning.streamate || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 }), tokensPer15Min: parseInt(e.target.value) || 0}})}
+                            className="w-full bg-slate-900 border border-white/10 p-2 rounded text-sm text-white focus:outline-none focus:border-accent-gold"
+                          />
+                        </div>
+                        <div className="space-y-1 col-span-2">
+                          <label className="text-[10px] uppercase font-bold text-slate-400" title="Piso de inercia">Base Followers Activos En Sala</label>
+                          <input 
+                            type="number"
+                            value={rankPositioning.streamate?.followerBaseTarget || ""}
+                            onChange={(e) => setRankPositioning({...rankPositioning, streamate: {...(rankPositioning.streamate || { averageViewersTarget: 0, tokensPer15Min: 0, followerBaseTarget: 0 }), followerBaseTarget: parseInt(e.target.value) || 0}})}
                             className="w-full bg-slate-900 border border-white/10 p-2 rounded text-sm text-white focus:outline-none focus:border-accent-gold"
                           />
                         </div>

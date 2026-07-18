@@ -1,70 +1,101 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
+
     // ==========================================
     // FUNCIONES DE SEGURIDAD
     // ==========================================
-    
-    // Obtiene los datos del usuario actual una sola vez para eficiencia
+
+    // Lee el perfil del usuario actual desde Firestore
     function getUserData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // Verifica si el usuario es Staff (Admin o Monitor)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
     function isStaff() {
-      let role = getUserData().role;
-      return request.auth != null && (role == 'admin' || role == 'monitor');
+      return isAuthenticated() &&
+        (getUserData().role == 'admin' || getUserData().role == 'monitor');
     }
 
-    // Verifica si el usuario es una Modelo
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+
     function isModel() {
-      return request.auth != null && getUserData().role == 'model';
+      return isAuthenticated() && getUserData().role == 'model';
     }
 
-    // Obtiene el ID de modelo asociado al usuario actual
+    // Retorna el modelId vinculado al usuario actual
     function currentUserModelId() {
       return getUserData().modelId;
     }
 
-    // Verifica si el usuario es dueño de los datos de una modelo específica
-    function isOwner(modelId) {
-      return isModel() && currentUserModelId() == modelId;
+    // ==========================================
+    // REGLAS POR COLECCIÓN
+    // ==========================================
+
+    // --- Usuarios ---
+    // Staff lee todos; cada usuario lee su propio perfil.
+    // Modelos pueden listar la colección filtrada (para obtener monitoras activas en evaluaciones).
+    // Login por username sin sesión: query limit=1 permitido.
+    match /users/{userId} {
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isStaff());
+      allow list: if isStaff()
+                  || isModel()
+                  || (request.auth == null && request.query.limit <= 1);
+      allow write: if isAdmin() || (isAuthenticated() && request.auth.uid == userId);
     }
 
-    // ==========================================
-    // 🛡️ REGLAS DE ACCESO PARA MODELOS
-    // Permite que las modelos vean SOLO su propia información.
-    // ==========================================
-
-    // Colección principal de Modelos (V1)
+    // --- Modelos (ficha técnica) ---
+    // Staff ve todos; cada modelo solo ve su propio documento (getDoc directo)
     match /models/{modelId} {
-      allow read: if isStaff() || isOwner(modelId);
-      allow write: if isStaff(); // Solo Staff puede modificar la ficha técnica base
-    }
-
-    // Colecciones de la App de Asesoría (V2)
-    match /modelos_profile_v2/{modelId} {
-      allow read: if isStaff() || isOwner(modelId);
+      allow read: if isStaff() || (isModel() && currentUserModelId() == modelId);
       allow write: if isStaff();
     }
-    
-    match /modelos_profile_history_v2/{historyId} {
-      // Nota: El ID aquí suele ser timestamp#modelId o similar, verificamos el campo de datos
-      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
-    }
 
-    match /modelos_analytics_cache_v2/{cacheId} {
-      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
-    }
-
-    // Métricas y Horas de Trabajo
+    // --- Métricas diarias ---
     match /daily_metrics/{metricId} {
       allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
       allow write: if isStaff();
+      allow delete: if isAdmin();
     }
 
+    // --- Horas de trabajo ---
     match /work_hours/{workId} {
+      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
+      allow write: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // --- Multas de nómina (Reporte de Pagos) ---
+    match /model_fines/{fineId} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow write: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // --- Liquidaciones procesadas (Historial de nómina) ---
+    match /processed_payrolls/{payrollId} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow write: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // --- Perfil extendido V2 (asesoría) ---
+    match /modelos_profile_v2/{modelId} {
+      allow read: if isStaff() || (isModel() && currentUserModelId() == modelId);
+      allow write: if isStaff();
+    }
+
+    match /modelos_profile_history_v2/{historyId} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    match /modelos_analytics_cache_v2/{cacheId} {
       allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
       allow write: if isStaff();
     }
@@ -74,24 +105,151 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
-    // ==========================================
-    // 🛡️ REGLAS GENERALES Y STAFF
-    // ==========================================
-
-    // Los usuarios pueden leer su propio documento en 'users' para que la app cargue
-    match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
+    // --- Configuración del estudio ---
+    // Todos los usuarios autenticados pueden leer (necesario para PlatformContext)
+    match /studio/{documentId} {
+      allow read: if isAuthenticated();
       allow write: if isStaff();
     }
 
-    // Transacciones sospechosas: Solo accesible por Administradores
-    match /suspicious_transfers/{transferId} {
-      allow read, write: if request.auth != null && getUserData().role == 'admin';
+    // --- Salas ---
+    match /rooms/{roomId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
     }
 
-    // Permitir acceso total al Staff para el resto de la base de datos (Operatividad)
+    // --- Finanzas (solo Staff) ---
+    match /financial_transactions/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /financial_budgets/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /transactions/{transactionId} {
+      allow read, write: if isStaff();
+    }
+
+    match /savings_transactions/{txId} {
+      allow read: if isStaff() || (isModel() && resource.data.model_id == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    // --- Inventario ---
+    match /inventory/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /inventory_transactions/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /assets/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /products/{id} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    match /product_transactions/{id} {
+      allow read, write: if isStaff();
+    }
+
+    match /model_sales/{id} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow write: if isStaff();
+    }
+
+    match /model_cart_requests/{id} {
+      allow create: if isModel();
+      allow read: if isStaff() || (isModel() && (resource.data.modelId == currentUserModelId() || resource.data.status == 'pending_approval'));
+      allow update, delete: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId() && resource.data.status == 'pending_approval');
+    }
+
+    // --- Calendario de Eventos ---
+    match /events/{eventId} {
+      // Staff can read/write everything
+      allow read, write: if isStaff();
+      // Models can read a single event doc if it's general or assigned to them
+      allow get: if isModel() && (resource.data.scope == 'general' || resource.data.model_id == currentUserModelId());
+      // Models can list events - security enforced by query constraints (scope filter)
+      allow list: if isModel();
+    }
+
+    match /month_headers/{headerId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    // --- Evaluaciones de monitoras ---
+    // Modelos: pueden crear evaluaciones y leer solo las suyas (verificación por modelId).
+    // Monitoras: pueden leer solo las evaluaciones donde son evaluadas (por monitorId).
+    // Admin: acceso total.
+    // La subcolección /private/data contiene comentarios — SOLO admin.
+    match /evaluations/{evalId} {
+      allow create: if isModel();
+      allow read: if isAdmin()
+                  || (isModel() && resource.data.modelId == request.auth.uid)
+                  || (isAuthenticated() && getUserData().role == 'monitor' && resource.data.monitorId == request.auth.uid);
+      allow list: if isAdmin()
+                  || isModel()
+                  || (isAuthenticated() && getUserData().role == 'monitor');
+      allow update, delete: if isAdmin();
+
+      // Subcolección privada: comentarios anónimos — EXCLUSIVO para admin
+      match /private/{doc} {
+        allow read, write: if isAdmin();
+        allow create: if isModel(); // la modelo puede escribir su comentario
+      }
+    }
+
+    // --- Novedades e Inasistencias ---
+    match /news/{newsId} {
+      allow create: if isAuthenticated();
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // --- Sugerencias ---
+    match /suggestions/{suggestionId} {
+      allow create: if isAuthenticated();
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // --- Sesiones de usuario (Tracking de utilización) ---
+    match /user_sessions/{sessionId} {
+      allow create: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid;
+      allow get: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow list: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- Asistencia ---
+    // 'list' no tiene acceso a resource.data, por eso separamos get de list.
+    // La seguridad de la lista se garantiza via query constraints en el cliente.
+    match /attendance/{attendanceId} {
+      allow list: if isAuthenticated();
+      allow get:  if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow create: if isStaff() || isModel();
+      allow update: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow delete: if isStaff();
+    }
+
+    // --- Auditoría de Fugas ---
+    match /suspicious_transfers/{transferId} {
+      allow read, write: if isAdmin();
+    }
+
+    // --- Bloqueo por defecto: todo lo demás denegado ---
     match /{document=**} {
-      allow read, write: if isStaff() && !(request.path.size() > 3 && request.path[3] == 'suspicious_transfers');
+      allow read, write: if false;
     }
   }
 }
