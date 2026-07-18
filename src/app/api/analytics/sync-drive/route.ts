@@ -468,14 +468,29 @@ export async function POST(req: Request) {
                );
                if (exactKey) return normalizedRow[exactKey];
 
-               // 2. Coincidencia parcial después
+               // 2. Coincidencia parcial después (evitando patrones muy cortos como 'to' para prevenir falsos positivos)
                const matchedKey = keys.find(k => 
-                 patterns.some(p => k.includes(p.toLowerCase()))
+                 patterns.some(p => {
+                   const lp = p.toLowerCase();
+                   if (lp.length <= 2) return false; // Evita que 'to' coincida con 'tokens'
+                   return k.includes(lp);
+                 })
                );
                return matchedKey ? normalizedRow[matchedKey] : fallback;
              };
 
-            const rawUser = findValue(["customer nickname", "usuarios", "user", "tipper", "usuario", "sender", "fan", "username", "to", "recipient", "__empty"], "Unknown");
+             let rawUser = findValue(["customer nickname", "usuarios", "user", "tipper", "usuario", "sender", "fan", "username", "to", "recipient", "__empty"], "Unknown");
+             
+             // Si el usuario detectado es numérico, vacío o desconocido, buscamos en columnas vacías (__empty) que contengan texto real
+             if (rawUser && (rawUser === "Unknown" || !isNaN(Number(String(rawUser).trim())) || String(rawUser).trim() === "")) {
+               const keys = Object.keys(normalizedRow);
+               const emptyKey = keys.find(k => k.startsWith("__empty") && normalizedRow[k] && isNaN(Number(String(normalizedRow[k]).trim())));
+               if (emptyKey) {
+                 rawUser = normalizedRow[emptyKey];
+               } else {
+                 rawUser = "Unknown";
+               }
+             }
             const rawType = findValue(["type", "tipo", "accion", "transaction", "category"], "");
             const rawTimestamp = findValue(["transaction time", "timestamp", "fecha", "date", "creation", "time"], null);
             const note = String(normalizedRow["Note"] || normalizedRow["note"] || "").toLowerCase();
@@ -560,8 +575,9 @@ export async function POST(req: Request) {
               }
             }
 
-            const isEarning = type.includes("propina") || type.includes("tip") || type.includes("token") || 
-              (!type.includes("transferencia") && !type.includes("payout") && !type.includes("tasa") && !type.includes("estudio"));
+             const isEarning = (tokensVal > 0) && (type.includes("propina") || type.includes("tip") || type.includes("token") || 
+               (!type.includes("transferencia") && !type.includes("payout") && !type.includes("tasa") && !type.includes("estudio"))) &&
+               !type.includes("cash out") && !type.includes("cashout") && !type.includes("payout");
             
             if (tokensVal !== 0 && username !== "Unknown" && !EXCLUDED_STUDIO_USERS.includes(username.toLowerCase()) && isEarning) {
               const absTokens = Math.abs(tokensVal);
