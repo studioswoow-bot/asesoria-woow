@@ -1,0 +1,16 @@
+{
+  "projects": {
+    "default": "estudioswoow-7288e"
+  },
+  "targets": {
+    "estudioswoow-7288e": {
+      "hosting": {
+        "registro-modelos": [
+          "estudioswoow-modelos"
+        ]
+      }
+    }
+  }
+}
+
+
