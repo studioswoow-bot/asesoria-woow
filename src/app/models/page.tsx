@@ -8,6 +8,7 @@ import LoadingScreen from "@/components/common/LoadingScreen";
 import { calculateProfileProgress } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import ModelAvatar from "@/components/common/ModelAvatar";
+import ModelPdfModal from "@/components/common/ModelPdfModal";
 
 interface Model {
   id: string;
@@ -27,8 +28,8 @@ export default function ModelsPage() {
   const { user } = useAuth();
   const [realModels, setRealModels] = useState<Model[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPdfModelId, setSelectedPdfModelId] = useState<string | null>(null);
 
 
   useEffect(() => {
@@ -207,6 +208,13 @@ export default function ModelsPage() {
                       <Link href={`/models/${model.id}/edit`} className="p-2 hover:bg-primary/20 rounded-lg text-text-muted hover:text-primary transition-all" title="Editar Perfilamiento">
                         <span className="material-symbols-outlined text-sm">edit</span>
                       </Link>
+                      <button
+                        onClick={() => setSelectedPdfModelId(model.id)}
+                        className="p-2 hover:bg-emerald-500/20 rounded-lg text-text-muted hover:text-emerald-400 transition-all cursor-pointer"
+                        title="Generar Ficha PDF para IA Local"
+                      >
+                        <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -219,6 +227,13 @@ export default function ModelsPage() {
           <div>Mostrando {realModels.length} modelos sincronizadas</div>
         </div>
       </div>
+
+      {/* Modal para descargar PDF con resumen para IA */}
+      <ModelPdfModal
+        isOpen={!!selectedPdfModelId}
+        onClose={() => setSelectedPdfModelId(null)}
+        modelId={selectedPdfModelId}
+      />
     </div>
   );
 }

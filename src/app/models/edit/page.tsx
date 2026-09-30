@@ -14,6 +14,7 @@ import outfitsData from "@/data/outfits.json";
 import { usePlatforms } from "@/context/PlatformContext";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import { calculateProfileProgress } from "@/lib/utils";
+import ModelPdfModal from "@/components/common/ModelPdfModal";
 
 interface GlossaryItem {
   term: string;
@@ -50,6 +51,8 @@ function EditProfileContent() {
   const [selectedOutfits, setSelectedOutfits] = useState<string[]>([]);
   const [customOutfits, setCustomOutfits] = useState<string[]>([]);
   const [otherOutfitInput, setOtherOutfitInput] = useState("");
+  const [interviewNotes, setInterviewNotes] = useState("");
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
   
   const [generalInfo, setGeneralInfo] = useState({
     realName: "",
@@ -111,6 +114,7 @@ function EditProfileContent() {
           if (pData.platformAliases) setPlatformAliases(prev => ({ ...prev, ...pData.platformAliases }));
           if (pData.apiEnabledPlatforms) setApiEnabledPlatforms(pData.apiEnabledPlatforms);
           else setApiEnabledPlatforms(initialPlatforms);
+          if (pData.interviewNotes) setInterviewNotes(pData.interviewNotes);
 
           if (pData.generalInfo) {
             setGeneralInfo(prev => ({
@@ -165,6 +169,7 @@ function EditProfileContent() {
         platformAliases,
         apiEnabledPlatforms,
         generalInfo,
+        interviewNotes,
         progress: progress 
       };
 
@@ -356,13 +361,24 @@ function EditProfileContent() {
               </div>
             </div>
         </div>
-        <button 
-            onClick={handleUpdateProfile}
-            disabled={isSaving}
-            className="px-8 py-4 bg-primary text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50 mt-4 lg:mt-0"
-        >
-            {isSaving ? "Guardando..." : "Finalizar Edición"}
-        </button>
+        <div className="flex items-center gap-3 mt-4 lg:mt-0">
+          <button 
+              type="button"
+              onClick={() => setIsPdfModalOpen(true)}
+              className="flex items-center gap-2 px-6 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all shadow-xl shadow-emerald-600/25 cursor-pointer"
+              title="Descargar Ficha PDF para IA Local"
+          >
+              <span className="material-symbols-outlined text-base">picture_as_pdf</span>
+              Ficha PDF (IA)
+          </button>
+          <button 
+              onClick={handleUpdateProfile}
+              disabled={isSaving}
+              className="px-8 py-4 bg-primary text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 disabled:opacity-50"
+          >
+              {isSaving ? "Guardando..." : "Finalizar Edición"}
+          </button>
+        </div>
       </div>
 
       <div className="space-y-12 pb-32">
@@ -634,7 +650,32 @@ function EditProfileContent() {
                 })}
             </div>
         </section>
+
+        {/* LO HABLADO CON LA MODELO / ENTREVISTA */}
+        <section className="bg-sidebar-dark/50 rounded-3xl border border-primary/20 p-8">
+            <h4 className="font-bold text-white text-lg mb-2 flex items-center gap-3">
+                <span className="material-symbols-outlined text-primary">forum</span>
+                Resumen de lo Hablado con la Modelo (Entrevista y Acuerdos)
+            </h4>
+            <p className="text-xs text-slate-400 mb-6">
+                Escribe o actualiza los acuerdos, límites, gustos, disponibilidad o notas especiales discutidas con la modelo. Esta información se guardará en su perfil y se incluirá en la ficha PDF para la IA local.
+            </p>
+            <textarea
+                value={interviewNotes}
+                onChange={(e) => setInterviewNotes(e.target.value)}
+                rows={5}
+                placeholder="Ejemplo: La modelo prefiere dinámicas de show sensuales y baile, tiene buen inglés conversacional, le interesa enfocar su personaje en temáticas cosplay y no realiza shows extremos. Dispuesta a usar Lovense en dinámicas interactivas."
+                className="w-full bg-panel-dark/50 border border-primary/20 rounded-2xl p-5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary placeholder:text-slate-500 transition-all"
+            />
+        </section>
       </div>
+
+      {/* Modal para descargar PDF con resumen para IA */}
+      <ModelPdfModal
+        isOpen={isPdfModalOpen}
+        onClose={() => setIsPdfModalOpen(false)}
+        modelId={id}
+      />
     </div>
   );
 }

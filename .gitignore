@@ -18,3 +18,5 @@ yarn-error.log*
 *.pem
 tsconfig.tsbuildinfo
 scratch/
+firebase_deploy.json
+public/index.html

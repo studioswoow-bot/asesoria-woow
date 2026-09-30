@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import LoadingScreen from "@/components/common/LoadingScreen";
 import ModelAvatar from "@/components/common/ModelAvatar";
+import ModelPdfModal from "@/components/common/ModelPdfModal";
 
 interface Model {
   id: string;
@@ -25,6 +26,8 @@ interface ModelTableProps {
 }
 
 export default function ModelTable({ models, loading }: ModelTableProps) {
+  const [selectedPdfModelId, setSelectedPdfModelId] = useState<string | null>(null);
+
   if (loading) {
     return (
       <div className="bg-sidebar-dark/50 rounded-2xl border border-primary/20 overflow-hidden">
@@ -104,6 +107,13 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
                     <Link href={`/models/edit?id=${model.id}`} className="p-2 text-text-muted hover:text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all" title="Editar / Completar Perfil">
                       <span className="material-symbols-outlined text-[18px]">edit</span>
                     </Link>
+                    <button
+                      onClick={() => setSelectedPdfModelId(model.id)}
+                      className="p-2 text-text-muted hover:text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-all cursor-pointer"
+                      title="Generar Ficha PDF para IA Local"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -115,6 +125,13 @@ export default function ModelTable({ models, loading }: ModelTableProps) {
       <div className="px-6 py-4 border-t border-text-main/10 flex items-center justify-between bg-text-main/5">
         <p className="text-xs text-text-muted">Mostrando {models.length} modelos en tiempo real</p>
       </div>
+
+      {/* Modal de generación de PDF para IA */}
+      <ModelPdfModal
+        isOpen={!!selectedPdfModelId}
+        onClose={() => setSelectedPdfModelId(null)}
+        modelId={selectedPdfModelId}
+      />
     </div>
   );
 }

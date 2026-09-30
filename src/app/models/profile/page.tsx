@@ -10,6 +10,7 @@ import { calculateWooWRating, WooWRatingResult } from "@/lib/ratingAlgorithm";
 import { ActionPlan } from '@/context/ActionPlanContext';
 import { useAuth } from '@/context/AuthContext';
 import ModelAvatar from '@/components/common/ModelAvatar';
+import ModelPdfModal from '@/components/common/ModelPdfModal';
 
 interface ModelData {
   id: string;
@@ -32,6 +33,7 @@ function ProfileContent() {
   const [model, setModel] = useState<ModelData | null>(null);
   const [loading, setLoading] = useState(true);
   const [woowRating, setWoowRating] = useState<WooWRatingResult | null>(null);
+  const [isPdfModalOpen, setIsPdfModalOpen] = useState(false);
 
   const isModel = profile?.role === 'model';
 
@@ -146,10 +148,18 @@ function ProfileContent() {
       {/* Premium Header */}
       <div className="relative overflow-hidden bg-panel-dark rounded-[2.5rem] border border-text-main/10 p-10 shadow-2xl transition-colors duration-300">
         {!isModel && (
-          <div className="absolute top-0 right-0 p-8 z-[100]">
+          <div className="absolute top-0 right-0 p-8 z-[100] flex items-center gap-3">
+              <button
+                onClick={() => setIsPdfModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-emerald-600/25 backdrop-blur-md cursor-pointer"
+                title="Generar Ficha PDF para IA Local"
+              >
+                  <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                  Ficha PDF (IA)
+              </button>
               <Link 
                 href={`/models/edit?id=${id}`} 
-                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 backdrop-blur-md cursor-pointer z-[100]"
+                className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all shadow-xl shadow-primary/20 backdrop-blur-md cursor-pointer"
               >
                   <span className="material-symbols-outlined text-sm">edit_note</span>
                   Completar Perfil
@@ -348,8 +358,33 @@ function ProfileContent() {
                      )}
                  </div>
               </div>
+
+              {/* Tarjeta de Ficha PDF para IA */}
+              <div className="bg-panel-dark rounded-3xl border border-text-main/10 p-8 shadow-xl">
+                 <div className="flex items-center gap-2 mb-3">
+                   <span className="material-symbols-outlined text-emerald-400">smart_toy</span>
+                   <h4 className="text-emerald-400 font-black text-xs uppercase tracking-widest">Ficha IA Local</h4>
+                 </div>
+                 <p className="text-[11px] text-text-muted leading-relaxed mb-4">
+                   Descarga el resumen completo con foto, edad, morfología, inventario de juguetes, shows acordados y notas de entrevista en formato PDF listo para subir a una IA local (Ollama, LM Studio) y generar perfiles magnéticos.
+                 </p>
+                 <button
+                   onClick={() => setIsPdfModalOpen(true)}
+                   className="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-600/15 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all cursor-pointer shadow-lg shadow-emerald-500/10 hover:scale-[1.02]"
+                 >
+                   <span className="material-symbols-outlined text-base">download</span>
+                   Exportar PDF para IA
+                 </button>
+              </div>
           </div>
        </div>
+
+       {/* Modal para descargar PDF con resumen para IA */}
+       <ModelPdfModal
+         isOpen={isPdfModalOpen}
+         onClose={() => setIsPdfModalOpen(false)}
+         modelId={id}
+       />
     </div>
   );
 }
