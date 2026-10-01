@@ -84,6 +84,13 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // --- Avances de dinero a modelos ---
+    match /model_advances/{advanceId} {
+      allow read: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
+      allow write: if isStaff();
+      allow delete: if isAdmin();
+    }
+
     // --- Perfil extendido V2 (asesoría) ---
     match /modelos_profile_v2/{modelId} {
       allow read: if isStaff() || (isModel() && currentUserModelId() == modelId);
@@ -240,6 +247,17 @@ service cloud.firestore {
       allow create: if isStaff() || isModel();
       allow update: if isStaff() || (isModel() && resource.data.modelId == currentUserModelId());
       allow delete: if isStaff();
+    }
+
+    // --- Actividades de Monitores ---
+    // Admin: acceso total a todas las actividades del estudio.
+    // Monitor: solo puede consultar y actualizar las tareas asignadas a su propio UID.
+    match /activities/{activityId} {
+      allow get: if isAdmin() || (isAuthenticated() && getUserData().role == 'monitor' && resource.data.assignedTo == request.auth.uid);
+      allow list: if isAdmin() || (isAuthenticated() && getUserData().role == 'monitor');
+      allow create: if isStaff();
+      allow update: if isAdmin() || (isAuthenticated() && getUserData().role == 'monitor' && resource.data.assignedTo == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
     // --- Auditoría de Fugas ---
