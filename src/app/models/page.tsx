@@ -9,6 +9,7 @@ import { calculateProfileProgress } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import ModelAvatar from "@/components/common/ModelAvatar";
 import ModelPdfModal from "@/components/common/ModelPdfModal";
+import { PredictiveCalculatorModal } from "@/components/common/PredictiveCalculatorModal";
 
 interface Model {
   id: string;
@@ -30,6 +31,7 @@ export default function ModelsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPdfModelId, setSelectedPdfModelId] = useState<string | null>(null);
+  const [selectedCalculatorModel, setSelectedCalculatorModel] = useState<Model | null>(null);
 
 
   useEffect(() => {
@@ -209,6 +211,13 @@ export default function ModelsPage() {
                         <span className="material-symbols-outlined text-sm">edit</span>
                       </Link>
                       <button
+                        onClick={() => setSelectedCalculatorModel(model)}
+                        className="p-2 hover:bg-primary/20 rounded-lg text-text-muted hover:text-primary transition-all cursor-pointer"
+                        title="Calculadora Predictiva de Facturación (Horas vs Ganancias)"
+                      >
+                        <span className="material-symbols-outlined text-sm">calculate</span>
+                      </button>
+                      <button
                         onClick={() => setSelectedPdfModelId(model.id)}
                         className="p-2 hover:bg-emerald-500/20 rounded-lg text-text-muted hover:text-emerald-400 transition-all cursor-pointer"
                         title="Generar Ficha PDF para IA Local"
@@ -233,6 +242,13 @@ export default function ModelsPage() {
         isOpen={!!selectedPdfModelId}
         onClose={() => setSelectedPdfModelId(null)}
         modelId={selectedPdfModelId}
+      />
+
+      {/* Modal Calculadora Predictiva de Facturación */}
+      <PredictiveCalculatorModal
+        isOpen={!!selectedCalculatorModel}
+        onClose={() => setSelectedCalculatorModel(null)}
+        model={selectedCalculatorModel}
       />
     </div>
   );
