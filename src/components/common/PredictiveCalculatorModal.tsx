@@ -31,6 +31,7 @@ export function PredictiveCalculatorModal({
   const [attendSundays, setAttendSundays] = useState<number>(0); // Domingos asistidos (0 a 2 en la quincena)
   const [attendHolidays, setAttendHolidays] = useState<number>(0); // Festivos asistidos (0 a 2 en la quincena)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const [selectedBiweekHalf, setSelectedBiweekHalf] = useState<"Q1" | "Q2">("Q2"); // Q1: 1 al 15, Q2: 16 al 30/31
   const [selectedPlatform, setSelectedPlatform] = useState<string>("ALL");
 
   // Tasa de cambio (TRM) personalizable por la modelo o estudio
@@ -133,13 +134,17 @@ export function PredictiveCalculatorModal({
     const p50Fph = currentPlatMetrics?.followersPerHour?.p50 || 2.8;
     const p75Fph = currentPlatMetrics?.followersPerHour?.p75 || 4.5;
 
-    // Multiplicador estacional moderado
+    // Multiplicador estacional empírico de la agencia según mes y quincena (Q1 o Q2)
     const seasonalInfo = data?.seasonalFactors?.[selectedMonth] || {
       factor: 1.0,
+      q1Factor: 1.0,
+      q2Factor: 1.0,
       season: "Media",
       reason: "Estabilidad de mercado"
     };
-    const seasonalFactor = seasonalInfo.factor || 1.0;
+    const seasonalFactor = selectedBiweekHalf === "Q1" 
+      ? (seasonalInfo.q1Factor || seasonalInfo.factor || 1.0)
+      : (seasonalInfo.q2Factor || seasonalInfo.factor || 1.0);
 
     // Ajuste por duración del turno anclado a la meta de 6h = 1.00x (100% de su mediana histórica real)
     let shiftMultiplier = 1.0;
@@ -241,7 +246,7 @@ export function PredictiveCalculatorModal({
         p75: biweeklyCopP75 * 2
       }
     };
-  }, [dailyHours, workDays, attendSundays, attendHolidays, selectedMonth, selectedPlatform, platformCurrency, currentPlatMetrics, data, exchangeRateUsdCop, exchangeRateEurUsd]);
+  }, [dailyHours, workDays, attendSundays, attendHolidays, selectedMonth, selectedBiweekHalf, selectedPlatform, platformCurrency, currentPlatMetrics, data, exchangeRateUsdCop, exchangeRateEurUsd]);
 
   if (!isOpen || !model) return null;
 
@@ -501,29 +506,67 @@ export function PredictiveCalculatorModal({
                   </div>
                 </div>
 
-                {/* Selector de Mes / Temporada */}
-                <div className="pt-2 border-t border-text-main/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div className="flex-1">
-                    <label className="text-xs font-semibold text-text-muted block mb-1">Temporada / Mes a Proyectar:</label>
+                {/* Selector de Mes / Temporada y Quincena (Q1/Q2) */}
+                <div className="pt-2 border-t border-text-main/10 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div className="md:col-span-2">
+                    <label className="text-xs font-semibold text-text-muted block mb-1">
+                      Temporada Empírica WooW Estudios (Normalizada por Creadoras Activas):
+                    </label>
                     <select
                       value={selectedMonth}
                       onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
                       className="w-full bg-background-dark border border-text-main/15 rounded-xl px-3 py-2 text-xs text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
                     >
-                      {Object.entries(data?.seasonalFactors || {}).map(([mStr, s]: [string, any]) => (
-                        <option key={mStr} value={mStr}>
-                          Mes {mStr} ({s.season} - {s.factor}x) — {s.reason}
-                        </option>
-                      ))}
+                      {Object.entries(data?.seasonalFactors || {}).map(([mStr, s]: [string, any]) => {
+                        const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+                        const mName = monthNames[parseInt(mStr, 10) - 1] || `Mes ${mStr}`;
+                        return (
+                          <option key={mStr} value={mStr}>
+                            {mName} — Temporada {s.season} ({s.factor}x) | Prom. Agencia: {s.agencyAvgTokensPerCreator?.toLocaleString() || "6,500"} tk/creadora ({s.activeCreatorsAvg || 20} activas)
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
 
-                  <div className="bg-background-dark/60 px-3.5 py-2 rounded-xl border border-text-main/10 text-right">
-                    <span className="text-[10px] uppercase font-bold text-text-muted block">Modo Analizado</span>
-                    <span className="text-xs font-bold text-primary">
-                      {selectedPlatform === "ALL" ? `Consolidado (${enabledPlatforms.join(" + ")})` : `Exclusivo ${selectedPlatform}`}
-                    </span>
+                  <div>
+                    <label className="text-xs font-semibold text-text-muted block mb-1">Quincena del Mes:</label>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBiweekHalf("Q1")}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          selectedBiweekHalf === "Q1"
+                            ? "bg-primary text-white shadow-md"
+                            : "bg-background-dark/70 text-text-muted hover:text-text-main border border-text-main/10"
+                        }`}
+                      >
+                        1ra Quincena (1-15)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedBiweekHalf("Q2")}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          selectedBiweekHalf === "Q2"
+                            ? "bg-primary text-white shadow-md"
+                            : "bg-background-dark/70 text-text-muted hover:text-text-main border border-text-main/10"
+                        }`}
+                      >
+                        2da Quincena (16-30)
+                      </button>
+                    </div>
                   </div>
+                </div>
+
+                {/* Nota explicativa de la temporada empírica */}
+                <div className="bg-background-dark/60 px-3.5 py-2.5 rounded-xl border border-text-main/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-text-muted">
+                    <span className="material-symbols-outlined text-accent-gold text-sm">insights</span>
+                    <span>{calculations.seasonalInfo.reason}</span>
+                  </div>
+                  <span className="text-[11px] font-bold text-primary">
+                    Factor Aplicado ({selectedBiweekHalf}): {calculations.seasonalFactor}x
+                  </span>
                 </div>
               </div>
 

@@ -51,20 +51,127 @@ const COLOMBIA_HOLIDAYS_2026 = new Set([
   "2026-12-25"  // Navidad
 ]);
 
-// Factores estacionales muy moderados para no inflar artificialmente los tokens
-const SEASONAL_FACTORS: Record<number, { factor: number; season: string; reason: string }> = {
-  1: { factor: 0.94, season: "Baja", reason: "Cuesta de enero y recortes tras navidad" },
-  2: { factor: 1.02, season: "Media-Alta", reason: "San Valentín y alta afluencia privada" },
-  3: { factor: 1.00, season: "Media", reason: "Estabilidad de primer trimestre" },
-  4: { factor: 0.97, season: "Media-Baja", reason: "Semanas santas y declaraciones fiscales (US)" },
-  5: { factor: 0.99, season: "Media", reason: "Estabilidad pre-vacacional" },
-  6: { factor: 1.00, season: "Media", reason: "Comienzo de verano hemisferio norte" },
-  7: { factor: 0.96, season: "Baja", reason: "Pico de vacaciones y actividades al aire libre" },
-  8: { factor: 0.95, season: "Baja", reason: "Vacaciones estivales en Europa y Norteamérica" },
-  9: { factor: 1.01, season: "Media-Alta", reason: "Retorno a rutina y aumento de tráfico en línea" },
-  10: { factor: 1.03, season: "Alta", reason: "Halloween y aumento de interacción" },
-  11: { factor: 1.06, season: "Muy Alta", reason: "Black Friday, Cyber Monday y mayor gasto" },
-  12: { factor: 1.08, season: "Pico Anual", reason: "Aguinaldos, bonos y fiestas de fin de año" }
+// Factores estacionales empíricos de WooW Estudios (calculados sobre los 606 archivos CSV de Drive
+// normalizados por la cantidad exacta de creadoras activas en cada quincena):
+// - Mayo (Q2), Junio, Julio y Agosto son la temporada ALTA real de la agencia (6,330 a 10,684 tk/creadora/quincena).
+// - Febrero, Marzo, Septiembre y Octubre presentan promedios más moderados/bajos por creadora (4,481 a 5,768 tk/creadora).
+const SEASONAL_FACTORS: Record<number, {
+  factor: number;
+  season: string;
+  reason: string;
+  agencyAvgTokensPerCreator: number;
+  activeCreatorsAvg: number;
+  q1Factor: number;
+  q2Factor: number;
+}> = {
+  1: {
+    factor: 1.00,
+    season: "Media-Alta",
+    reason: "Buen cierre en 2da quincena de enero (7,478 tk/creadora con 13 activas)",
+    agencyAvgTokensPerCreator: 6531,
+    activeCreatorsAvg: 12,
+    q1Factor: 0.94,
+    q2Factor: 1.06
+  },
+  2: {
+    factor: 0.90,
+    season: "Baja",
+    reason: "Contracción en febrero según histórico del estudio (5,455 tk/creadora con 15 activas)",
+    agencyAvgTokensPerCreator: 5455,
+    activeCreatorsAvg: 15,
+    q1Factor: 0.89,
+    q2Factor: 0.92
+  },
+  3: {
+    factor: 0.88,
+    season: "Baja",
+    reason: "Temporada baja de primer trimestre en la agencia (5,123 tk/creadora con 19 activas)",
+    agencyAvgTokensPerCreator: 5123,
+    activeCreatorsAvg: 19,
+    q1Factor: 0.88,
+    q2Factor: 0.88
+  },
+  4: {
+    factor: 0.98,
+    season: "Media",
+    reason: "Recuperación en 2da quincena de abril (6,943 tk/creadora con 20 activas)",
+    agencyAvgTokensPerCreator: 6324,
+    activeCreatorsAvg: 20,
+    q1Factor: 0.94,
+    q2Factor: 1.03
+  },
+  5: {
+    factor: 1.06,
+    season: "Alta",
+    reason: "Fuerte repunte en 2da quincena de mayo (10,188 tk/creadora con 17 activas)",
+    agencyAvgTokensPerCreator: 7484,
+    activeCreatorsAvg: 19,
+    q1Factor: 0.90,
+    q2Factor: 1.15
+  },
+  6: {
+    factor: 1.16,
+    season: "Pico Máximo",
+    reason: "Mes récord de facturación en la agencia (14,169 tk/creadora en Q1 y 7,559 tk en Q2 con 28 activas)",
+    agencyAvgTokensPerCreator: 10684,
+    activeCreatorsAvg: 28,
+    q1Factor: 1.20,
+    q2Factor: 1.08
+  },
+  7: {
+    factor: 1.08,
+    season: "Alta",
+    reason: "Temporada alta de mitad de año, pico en 2da quincena (9,427 tk/creadora con 22-31 activas)",
+    agencyAvgTokensPerCreator: 7024,
+    activeCreatorsAvg: 27,
+    q1Factor: 0.95,
+    q2Factor: 1.14
+  },
+  8: {
+    factor: 1.03,
+    season: "Media-Alta",
+    reason: "Mes alto sostenido en ambas quincenas de agosto (6,330 tk/creadora con 23-26 activas)",
+    agencyAvgTokensPerCreator: 6330,
+    activeCreatorsAvg: 23,
+    q1Factor: 1.01,
+    q2Factor: 1.04
+  },
+  9: {
+    factor: 0.93,
+    season: "Media-Baja",
+    reason: "Moderación tras pico de mitad de año (5,768 tk/creadora con 28-31 activas)",
+    agencyAvgTokensPerCreator: 5768,
+    activeCreatorsAvg: 28,
+    q1Factor: 0.95,
+    q2Factor: 0.91
+  },
+  10: {
+    factor: 0.86,
+    season: "Baja",
+    reason: "Quincena de menor promedio por creadora en registros actuales (4,481 tk/creadora con 28 activas)",
+    agencyAvgTokensPerCreator: 4481,
+    activeCreatorsAvg: 28,
+    q1Factor: 0.86,
+    q2Factor: 0.90
+  },
+  11: {
+    factor: 1.02,
+    season: "Media-Alta",
+    reason: "Temporada de reactivación de fin de año y Black Friday",
+    agencyAvgTokensPerCreator: 6600,
+    activeCreatorsAvg: 28,
+    q1Factor: 1.00,
+    q2Factor: 1.05
+  },
+  12: {
+    factor: 1.05,
+    season: "Alta",
+    reason: "Temporada de bonos y festividades de diciembre",
+    agencyAvgTokensPerCreator: 7100,
+    activeCreatorsAvg: 26,
+    q1Factor: 1.03,
+    q2Factor: 1.07
+  }
 };
 
 function calculatePercentile(sortedArr: number[], p: number): number {
