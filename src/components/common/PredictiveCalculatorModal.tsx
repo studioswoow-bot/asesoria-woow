@@ -510,7 +510,7 @@ export function PredictiveCalculatorModal({
                 <div className="pt-2 border-t border-text-main/10 grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
                   <div className="md:col-span-2">
                     <label className="text-xs font-semibold text-text-muted block mb-1">
-                      Temporada Empírica WooW Estudios (Normalizada por Creadoras Activas):
+                      Temporada Histórica Real (Quincenas 2 y 3 — 109 Quincenas Analizadas):
                     </label>
                     <select
                       value={selectedMonth}
@@ -522,7 +522,7 @@ export function PredictiveCalculatorModal({
                         const mName = monthNames[parseInt(mStr, 10) - 1] || `Mes ${mStr}`;
                         return (
                           <option key={mStr} value={mStr}>
-                            {mName} — Temporada {s.season} ({s.factor}x) | Prom. Agencia: {s.agencyAvgTokensPerCreator?.toLocaleString() || "6,500"} tk/creadora ({s.activeCreatorsAvg || 20} activas)
+                            {mName} — Temporada {s.season} | Prom. Creadora: {s.agencyAvgTokensPerCreator?.toLocaleString() || "7,000"} tk/Q ({s.activeCreatorsAvg || 15} activas) | Agencia: ~{s.agencyTotalTokensAvg?.toLocaleString() || "100,000"} tk/Q
                           </option>
                         );
                       })}
@@ -541,7 +541,7 @@ export function PredictiveCalculatorModal({
                             : "bg-background-dark/70 text-text-muted hover:text-text-main border border-text-main/10"
                         }`}
                       >
-                        1ra Quincena (1-15)
+                        1ra Q ({calculations.seasonalInfo?.q1Tier || "Q1"}: {calculations.seasonalInfo?.q1Factor || 1}x)
                       </button>
                       <button
                         type="button"
@@ -552,7 +552,7 @@ export function PredictiveCalculatorModal({
                             : "bg-background-dark/70 text-text-muted hover:text-text-main border border-text-main/10"
                         }`}
                       >
-                        2da Quincena (16-30)
+                        2da Q ({calculations.seasonalInfo?.q2Tier || "Q2"}: {calculations.seasonalInfo?.q2Factor || 1}x)
                       </button>
                     </div>
                   </div>

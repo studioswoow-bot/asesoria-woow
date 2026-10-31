@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import admin, { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { getDriveClient } from "@/lib/google-drive";
+import quincenasHistorical from "@/lib/quincenas-historical-data.json";
 
 interface PlatformMetrics {
   platform: string;
@@ -51,128 +52,10 @@ const COLOMBIA_HOLIDAYS_2026 = new Set([
   "2026-12-25"  // Navidad
 ]);
 
-// Factores estacionales empíricos de WooW Estudios (calculados sobre los 606 archivos CSV de Drive
-// normalizados por la cantidad exacta de creadoras activas en cada quincena):
-// - Mayo (Q2), Junio, Julio y Agosto son la temporada ALTA real de la agencia (6,330 a 10,684 tk/creadora/quincena).
-// - Febrero, Marzo, Septiembre y Octubre presentan promedios más moderados/bajos por creadora (4,481 a 5,768 tk/creadora).
-const SEASONAL_FACTORS: Record<number, {
-  factor: number;
-  season: string;
-  reason: string;
-  agencyAvgTokensPerCreator: number;
-  activeCreatorsAvg: number;
-  q1Factor: number;
-  q2Factor: number;
-}> = {
-  1: {
-    factor: 1.00,
-    season: "Media-Alta",
-    reason: "Buen cierre en 2da quincena de enero (7,478 tk/creadora con 13 activas)",
-    agencyAvgTokensPerCreator: 6531,
-    activeCreatorsAvg: 12,
-    q1Factor: 0.94,
-    q2Factor: 1.06
-  },
-  2: {
-    factor: 0.90,
-    season: "Baja",
-    reason: "Contracción en febrero según histórico del estudio (5,455 tk/creadora con 15 activas)",
-    agencyAvgTokensPerCreator: 5455,
-    activeCreatorsAvg: 15,
-    q1Factor: 0.89,
-    q2Factor: 0.92
-  },
-  3: {
-    factor: 0.88,
-    season: "Baja",
-    reason: "Temporada baja de primer trimestre en la agencia (5,123 tk/creadora con 19 activas)",
-    agencyAvgTokensPerCreator: 5123,
-    activeCreatorsAvg: 19,
-    q1Factor: 0.88,
-    q2Factor: 0.88
-  },
-  4: {
-    factor: 0.98,
-    season: "Media",
-    reason: "Recuperación en 2da quincena de abril (6,943 tk/creadora con 20 activas)",
-    agencyAvgTokensPerCreator: 6324,
-    activeCreatorsAvg: 20,
-    q1Factor: 0.94,
-    q2Factor: 1.03
-  },
-  5: {
-    factor: 1.06,
-    season: "Alta",
-    reason: "Fuerte repunte en 2da quincena de mayo (10,188 tk/creadora con 17 activas)",
-    agencyAvgTokensPerCreator: 7484,
-    activeCreatorsAvg: 19,
-    q1Factor: 0.90,
-    q2Factor: 1.15
-  },
-  6: {
-    factor: 1.16,
-    season: "Pico Máximo",
-    reason: "Mes récord de facturación en la agencia (14,169 tk/creadora en Q1 y 7,559 tk en Q2 con 28 activas)",
-    agencyAvgTokensPerCreator: 10684,
-    activeCreatorsAvg: 28,
-    q1Factor: 1.20,
-    q2Factor: 1.08
-  },
-  7: {
-    factor: 1.08,
-    season: "Alta",
-    reason: "Temporada alta de mitad de año, pico en 2da quincena (9,427 tk/creadora con 22-31 activas)",
-    agencyAvgTokensPerCreator: 7024,
-    activeCreatorsAvg: 27,
-    q1Factor: 0.95,
-    q2Factor: 1.14
-  },
-  8: {
-    factor: 1.03,
-    season: "Media-Alta",
-    reason: "Mes alto sostenido en ambas quincenas de agosto (6,330 tk/creadora con 23-26 activas)",
-    agencyAvgTokensPerCreator: 6330,
-    activeCreatorsAvg: 23,
-    q1Factor: 1.01,
-    q2Factor: 1.04
-  },
-  9: {
-    factor: 0.93,
-    season: "Media-Baja",
-    reason: "Moderación tras pico de mitad de año (5,768 tk/creadora con 28-31 activas)",
-    agencyAvgTokensPerCreator: 5768,
-    activeCreatorsAvg: 28,
-    q1Factor: 0.95,
-    q2Factor: 0.91
-  },
-  10: {
-    factor: 0.86,
-    season: "Baja",
-    reason: "Quincena de menor promedio por creadora en registros actuales (4,481 tk/creadora con 28 activas)",
-    agencyAvgTokensPerCreator: 4481,
-    activeCreatorsAvg: 28,
-    q1Factor: 0.86,
-    q2Factor: 0.90
-  },
-  11: {
-    factor: 1.02,
-    season: "Media-Alta",
-    reason: "Temporada de reactivación de fin de año y Black Friday",
-    agencyAvgTokensPerCreator: 6600,
-    activeCreatorsAvg: 28,
-    q1Factor: 1.00,
-    q2Factor: 1.05
-  },
-  12: {
-    factor: 1.05,
-    season: "Alta",
-    reason: "Temporada de bonos y festividades de diciembre",
-    agencyAvgTokensPerCreator: 7100,
-    activeCreatorsAvg: 26,
-    q1Factor: 1.03,
-    q2Factor: 1.07
-  }
-};
+// Factores estacionales empíricos de WooW Estudios (calculados sobre las 109 quincenas
+// de Quincenas 2.xlsx y Quincenas 3.xlsx de 2022 a 2026, normalizados por la cantidad exacta de creadoras activas):
+// - Enero, Diciembre, Julio, Agosto y Junio son la temporada ALTA real de la agencia.
+const SEASONAL_FACTORS: Record<string, any> = quincenasHistorical.seasonalFactors;
 
 function calculatePercentile(sortedArr: number[], p: number): number {
   if (sortedArr.length === 0) return 0;
@@ -192,7 +75,52 @@ function normalizePlatformName(p: string): string {
   if (low.includes("livejasmin") || low.includes("jasmin") || low === "lj") return "LiveJasmin";
   if (low.includes("skyprivate") || low === "sp") return "Skyprivate";
   if (low.includes("xlove") || low === "xl") return "XLove";
+  if (low.includes("cam4")) return "CAM4";
+  if (low.includes("camsoda")) return "CamSoda";
+  if (low.includes("bongacams")) return "Bongacams";
+  if (low.includes("dreamcam")) return "Dreamcam";
+  if (low.includes("myfreecams")) return "MyFreecams";
+  if (low.includes("amateur")) return "Amateur";
   return p.trim();
+}
+
+function toEquivTokensAndEarnings(platName: string, rawVal: number): { tokens: number; earnings: number; currency: "USD" | "EUR" } {
+  const num = Number(rawVal);
+  if (!Number.isFinite(num) || num <= 0) {
+    return { tokens: 0, earnings: 0, currency: platName === "XLove" ? "EUR" : "USD" };
+  }
+  const p = platName.toLowerCase();
+  // Plataformas cuyo registro en Quincenas 2 y 3 ya está en USD ($)
+  if (p.includes("streamate") || p.includes("livejasmin") || p.includes("skyprivate")) {
+    return {
+      tokens: Math.round(num * 20), // $1 USD = 20 tokens ($0.05)
+      earnings: Math.round(num * 100) / 100,
+      currency: "USD"
+    };
+  }
+  // XLove cuyo registro en Quincenas 2 y 3 está en EUR (€)
+  if (p.includes("xlove")) {
+    return {
+      tokens: Math.round(num * 21.6), // €1 EUR ~= $1.08 USD = 21.6 tokens
+      earnings: Math.round(num * 100) / 100,
+      currency: "EUR"
+    };
+  }
+  // Bongacams (45 tokens = $1 USD)
+  if (p.includes("bongacams")) {
+    const usd = num / 45;
+    return {
+      tokens: Math.round(usd * 20),
+      earnings: Math.round(usd * 100) / 100,
+      currency: "USD"
+    };
+  }
+  // Plataformas en tokens de $0.05 USD (Chaturbate, Stripchat, CAM4, CamSoda, Dreamcam, MyFreecams, Amateur)
+  return {
+    tokens: Math.round(num),
+    earnings: Math.round(num * 0.05 * 100) / 100,
+    currency: "USD"
+  };
 }
 
 /**
@@ -246,7 +174,6 @@ function parseCsvContent(text: string, hintPlatform: string | null): {
       if (parts.length >= 4) {
         const rawTk = parts[3].replace(/["\s\u00a0]/g, '');
         const val = parseInt(rawTk, 10);
-        // Solo sumar propinas/shows positivos, ignorar cashouts negativos
         if (!isNaN(val) && val > 0) {
           tkSum += val;
         }
@@ -298,7 +225,7 @@ export async function GET(req: NextRequest) {
 
     const drive = await getDriveClient();
 
-    // 1. Obtener datos, cuentas activas y aliases de Firestore
+    // 1. Obtener datos, cuentas activas y aliases de Firestore + Mapa de Usuarios Activos de Quincenas 3
     let modelData: any = null;
     const enabledPlatformsSet = new Set<string>();
     let searchAliases: string[] = [nickname, nickname.toLowerCase(), nickname.replace(/\s+/g, '_')];
@@ -311,14 +238,15 @@ export async function GET(req: NextRequest) {
           if (modelData.nickname) {
             searchAliases.push(modelData.nickname, modelData.nickname.toLowerCase());
           }
+          if (modelData.name) {
+            searchAliases.push(modelData.name, modelData.name.toLowerCase());
+          }
           // Extraer plataformas y usernames de accounts activas
           if (Array.isArray(modelData.accounts)) {
             modelData.accounts.forEach((acc: any) => {
               if (acc && acc.status === "active" && acc.platformName) {
                 const normPlat = normalizePlatformName(acc.platformName);
-                if (["Chaturbate", "Stripchat", "Streamate", "LiveJasmin", "Skyprivate", "XLove"].includes(normPlat)) {
-                  enabledPlatformsSet.add(normPlat);
-                }
+                enabledPlatformsSet.add(normPlat);
                 if (acc.username && !acc.username.includes("@")) {
                   const cleanUser = String(acc.username).trim();
                   searchAliases.push(cleanUser, cleanUser.toLowerCase());
@@ -329,9 +257,7 @@ export async function GET(req: NextRequest) {
           if (Array.isArray(modelData.platforms)) {
             modelData.platforms.forEach((p: string) => {
               const normPlat = normalizePlatformName(p);
-              if (["Chaturbate", "Stripchat", "Streamate", "LiveJasmin", "Skyprivate", "XLove"].includes(normPlat)) {
-                enabledPlatformsSet.add(normPlat);
-              }
+              enabledPlatformsSet.add(normPlat);
             });
           }
         }
@@ -340,7 +266,7 @@ export async function GET(req: NextRequest) {
         if (profileSnap.exists) {
           const pData = profileSnap.data();
           if (pData?.platformAliases) {
-            Object.entries(pData.platformAliases).forEach(([platKey, arr]: [string, any]) => {
+            Object.entries(pData.platformAliases).forEach(([, arr]: [string, any]) => {
               if (Array.isArray(arr)) {
                 arr.forEach(a => {
                   if (a) {
@@ -357,18 +283,81 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    searchAliases = Array.from(new Set(searchAliases.filter(a => a && a.length >= 3)));
+    // Cruzar también con la hoja "Usuarios activos" de Quincenas 3 (ej. Aleja_Hill <-> Engel_boss, SweetKitty <-> Natalia_Kiss01)
+    const activeGroups = (quincenasHistorical as any).activeUsersMap || [];
+    for (const group of activeGroups) {
+      const matchGroup = group.some((gAlias: string) => {
+        const gClean = gAlias.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return searchAliases.some(sa => sa.toLowerCase().replace(/[^a-z0-9]/g, "") === gClean);
+      });
+      if (matchGroup) {
+        group.forEach((gAlias: string) => searchAliases.push(gAlias, gAlias.toLowerCase()));
+      }
+    }
 
-    // 2. Extraer horas históricas del Drive (BATCH_MENSUAL)
-    const batchFolders = [
-      { id: '1NHOLMCekNrrOUjrRgOxkUfsjC-M76C4n', platform: 'Chaturbate', currency: 'USD' as const },
-      { id: '1HrtxbSUgDJP04VxKkOmIAJELkbrYilrP', platform: 'Stripchat', currency: 'USD' as const }
-    ];
+    searchAliases = Array.from(new Set(searchAliases.filter(a => a && a.length >= 3)));
 
     const periodMap = new Map<string, PeriodDetail>();
     let totalObservedDays = 0;
     let sundaySessionsCount = 0;
     let holidaySessionsCount = 0;
+
+    // 2. Precargar el historial completo de Quincenas 2.xlsx y Quincenas 3.xlsx para esta modelo
+    const historicalModels: Record<string, { rawName: string; records: any[] }> = (quincenasHistorical as any).models || {};
+    const matchedHistKeys = new Set<string>();
+
+    for (const [mKey, mObj] of Object.entries(historicalModels)) {
+      const isMatch = searchAliases.some(alias => {
+        const aClean = alias.toLowerCase().replace(/[^a-z0-9]/g, "");
+        return aClean.length >= 4 && (mKey === aClean || (aClean.length >= 6 && (mKey.includes(aClean) || aClean.includes(mKey))));
+      });
+      if (isMatch) {
+        matchedHistKeys.add(mKey);
+      }
+    }
+
+    for (const mKey of Array.from(matchedHistKeys)) {
+      const records = historicalModels[mKey]?.records || [];
+      for (const rec of records) {
+        const periodKey = rec.period; // ej. "2026-07-01_to_2026-07-15"
+        const monthNum = rec.month || 1;
+        const platformsObj = rec.platforms || {};
+
+        for (const [rawPlat, rawVal] of Object.entries(platformsObj)) {
+          const plat = normalizePlatformName(rawPlat);
+          const conv = toEquivTokensAndEarnings(plat, Number(rawVal));
+          if (conv.tokens > 0) {
+            // Si la quincena es reciente (2025 o 2026), habilitar automáticamente esa plataforma para la modelo
+            if (periodKey.startsWith("2025") || periodKey.startsWith("2026")) {
+              enabledPlatformsSet.add(plat);
+            }
+            const mapKey = `${periodKey}_${plat}`;
+            const existing = periodMap.get(mapKey);
+            if (!existing || conv.tokens > existing.tokens) {
+              periodMap.set(mapKey, {
+                period: periodKey,
+                month: monthNum,
+                platform: plat,
+                currency: conv.currency,
+                hours: existing?.hours || 60, // Base quincenal si aún no hay telemetría horaria
+                tokens: conv.tokens,
+                earnings: conv.earnings,
+                followersGain: existing?.followersGain || Math.round(60 * 1.8),
+                dailyHours: existing?.dailyHours || [],
+                sundayHours: existing?.sundayHours || 0,
+                holidayHours: existing?.holidayHours || 0
+              });
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Extraer horas exactas históricas del Drive (BATCH_MENSUAL) y enriquecer las quincenas
+    const batchFolders = [
+      { id: '1NHOLMCekNrrOUjrRgOxkUfsjC-M76C4n', platform: 'Chaturbate', currency: 'USD' as const },
+      { id: '1HrtxbSUgDJP04VxKkOmIAJELkbrYilrP', platform: 'Stripchat', currency: 'USD' as const }
+    ];
 
     for (const bf of batchFolders) {
       try {
@@ -386,6 +375,10 @@ export async function GET(req: NextRequest) {
           const matchPeriod = file.name.match(/(\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2})/);
           const periodKey = matchPeriod ? matchPeriod[1] : file.name;
           const monthNum = parseInt(periodKey.substring(5, 7), 10) || 1;
+          // Normalizar llave quincenal (01_to_15 o 16_to_30) para cruzar con Quincenas 2 y 3
+          const startDay = parseInt(periodKey.substring(8, 10), 10) || 1;
+          const yearMonth = periodKey.substring(0, 7);
+          const normPeriodKey = startDay <= 15 ? `${yearMonth}-01_to_${yearMonth}-15` : `${yearMonth}-16_to_${yearMonth}-30`;
 
           try {
             const fileContent = await drive.files.get({
@@ -465,20 +458,30 @@ export async function GET(req: NextRequest) {
               }
 
               const followersDiff = Math.max(0, finalFollowers - initialFollowers);
+              const mapKey = `${normPeriodKey}_${bf.platform}`;
+              const existing = periodMap.get(mapKey);
 
-              periodMap.set(`${periodKey}_${bf.platform}`, {
-                period: periodKey,
-                month: monthNum,
-                platform: bf.platform,
-                currency: bf.currency,
-                hours: Math.round(totalHours * 10) / 10,
-                tokens: 0,
-                earnings: 0,
-                followersGain: followersDiff,
-                dailyHours: dailyHoursArr,
-                sundayHours: Math.round(periodSundayHours * 10) / 10,
-                holidayHours: Math.round(periodHolidayHours * 10) / 10
-              });
+              if (existing) {
+                if (totalHours > 0) existing.hours = Math.round(totalHours * 10) / 10;
+                if (followersDiff > 0) existing.followersGain = followersDiff;
+                existing.dailyHours = dailyHoursArr;
+                existing.sundayHours = Math.round(periodSundayHours * 10) / 10;
+                existing.holidayHours = Math.round(periodHolidayHours * 10) / 10;
+              } else if (totalHours > 0) {
+                periodMap.set(mapKey, {
+                  period: normPeriodKey,
+                  month: monthNum,
+                  platform: bf.platform,
+                  currency: bf.currency,
+                  hours: Math.round(totalHours * 10) / 10,
+                  tokens: 0,
+                  earnings: 0,
+                  followersGain: followersDiff,
+                  dailyHours: dailyHoursArr,
+                  sundayHours: Math.round(periodSundayHours * 10) / 10,
+                  holidayHours: Math.round(periodHolidayHours * 10) / 10
+                });
+              }
             }
           } catch (eInner) {
             console.warn(`Error procesando batch ${file.name}:`, eInner);
@@ -489,7 +492,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Cruzar con todos los archivos CSV de la modelo en Drive (incluyendo aliases como Engel_boss)
+    // 4. Cruzar también con los archivos CSV nuevos en Historico APIS de Drive (por si hay quincenas aún no pasadas al Excel)
     const seenCsvFileIds = new Set<string>();
     const folderPlatformCache = new Map<string, string>();
 
@@ -510,8 +513,11 @@ export async function GET(req: NextRequest) {
 
           const matchPeriod = cf.name.match(/(\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2})/);
           if (!matchPeriod) continue;
-          const periodKey = matchPeriod[1];
-          const monthNum = parseInt(periodKey.substring(5, 7), 10) || 1;
+          const rawPeriodKey = matchPeriod[1];
+          const monthNum = parseInt(rawPeriodKey.substring(5, 7), 10) || 1;
+          const startDay = parseInt(rawPeriodKey.substring(8, 10), 10) || 1;
+          const yearMonth = rawPeriodKey.substring(0, 7);
+          const periodKey = startDay <= 15 ? `${yearMonth}-01_to_${yearMonth}-15` : `${yearMonth}-16_to_${yearMonth}-30`;
 
           let hintPlat: string | null = null;
           if (cf.parents && cf.parents[0]) {
@@ -548,9 +554,8 @@ export async function GET(req: NextRequest) {
             const mapKey = `${periodKey}_${plat}`;
             const existing = periodMap.get(mapKey);
 
-            // Si hay horas en Chaturbate en esa misma quincena, la modelo hace multi-streaming simultáneo
             const cbSamePeriod = periodMap.get(`${periodKey}_Chaturbate`);
-            const fallbackHours = cbSamePeriod && cbSamePeriod.hours > 0 ? cbSamePeriod.hours : 58;
+            const fallbackHours = cbSamePeriod && cbSamePeriod.hours > 0 ? cbSamePeriod.hours : 60;
 
             if (existing) {
               existing.tokens = Math.max(existing.tokens, parsedCsv.tokens);
@@ -580,24 +585,30 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Sincronizar las horas simultáneas de Chaturbate a las demás páginas de la misma quincena
+    for (const p of Array.from(periodMap.values())) {
+      const cbSame = periodMap.get(`${p.period}_Chaturbate`);
+      if (cbSame && cbSame.hours > 0 && (p.hours === 60 || p.hours === 0)) {
+        p.hours = cbSame.hours;
+      }
+    }
+
     // Filtrar solo las plataformas donde realmente tiene actividad o están habilitadas
     const allPeriods = Array.from(periodMap.values()).filter(p => p.tokens > 0 || p.hours > 0);
-    const platformsWithData = new Set(allPeriods.map(p => p.platform));
+    const platformsWithData = new Set(allPeriods.filter(p => p.tokens > 0).map(p => p.platform));
 
-    // Si hay plataformas con datos reales en Drive, priorizar esas plataformas + las de negocio principales
     const finalEnabledPlatforms = Array.from(enabledPlatformsSet).filter(
       p => platformsWithData.has(p) || ["Chaturbate", "Stripchat", "Streamate"].includes(p)
     );
     if (finalEnabledPlatforms.length === 0) finalEnabledPlatforms.push("Chaturbate");
 
-    // 4. Construir métricas específicas POR CADA PLATAFORMA basadas directamente en sus quincenas reales
+    // 5. Construir métricas específicas POR CADA PLATAFORMA basadas directamente en sus quincenas reales
     const platformBreakdown: Record<string, PlatformMetrics> = {};
     const STANDARD_BIWEEK_HOURS = 66; // 6 horas x 11 días hábiles
 
     for (const plat of finalEnabledPlatforms) {
       const platPeriods = allPeriods.filter(p => p.platform === plat && (p.tokens > 0 || p.hours > 0));
       const biweeklyTokensSamples: number[] = [];
-      const tphSamples: number[] = [];
       const fphSamples: number[] = [];
       let sumHours = 0;
       let sumTokens = 0;
@@ -610,22 +621,15 @@ export async function GET(req: NextRequest) {
 
         if (pp.tokens > 0) {
           biweeklyTokensSamples.push(pp.tokens);
-          const effectiveH = pp.hours >= 20 ? pp.hours : STANDARD_BIWEEK_HOURS;
-          tphSamples.push(pp.tokens / effectiveH);
         }
         if (pp.followersGain > 0 && pp.hours >= 15) {
           fphSamples.push(pp.followersGain / pp.hours);
         }
       }
 
-      // Valores conservadores por defecto si una plataforma tiene 0 archivos CSV
       const sortedBiweeklyTokens = biweeklyTokensSamples.length > 0
         ? [...biweeklyTokensSamples].sort((a, b) => a - b)
-        : [2200, 3500, 5000];
-
-      const sortedTph = tphSamples.length > 0
-        ? [...tphSamples].sort((a, b) => a - b)
-        : [33, 53, 75];
+        : [1800, 3200, 4800];
 
       const sortedFph = fphSamples.length > 0
         ? [...fphSamples].sort((a, b) => a - b)
@@ -637,10 +641,9 @@ export async function GET(req: NextRequest) {
       const bwMax = sortedBiweeklyTokens[sortedBiweeklyTokens.length - 1] || bwP75;
 
       // Anclar la tasa por hora a los percentiles quincenales reales divididos por las 66h estándar
-      // Así, en 6h x 11 días (66h), la calculadora jamás superará el P25/P50/P75 histórico real de esa página
-      const p25T = Math.max(10, Math.round(bwP25 / STANDARD_BIWEEK_HOURS));
-      const p50T = Math.max(15, Math.round(bwP50 / STANDARD_BIWEEK_HOURS));
-      const p75T = Math.max(22, Math.round(bwP75 / STANDARD_BIWEEK_HOURS));
+      const p25T = Math.max(5, Math.round(bwP25 / STANDARD_BIWEEK_HOURS));
+      const p50T = Math.max(10, Math.round(bwP50 / STANDARD_BIWEEK_HOURS));
+      const p75T = Math.max(15, Math.round(bwP75 / STANDARD_BIWEEK_HOURS));
 
       const p25F = Math.round(calculatePercentile(sortedFph, 25) * 10) / 10;
       const p50F = Math.round(calculatePercentile(sortedFph, 50) * 10) / 10;
@@ -679,19 +682,19 @@ export async function GET(req: NextRequest) {
       };
     }
 
-    // 5. Construir opción TOTALIZADA ("ALL") sumando los tokens reales de todas sus páginas en cada quincena
+    // 6. Construir opción TOTALIZADA ("ALL") sumando los tokens reales de todas sus páginas en cada quincena
     const combinedByPeriod = new Map<string, { tokens: number; hours: number; followers: number }>();
     for (const p of allPeriods) {
       const curr = combinedByPeriod.get(p.period) || { tokens: 0, hours: 0, followers: 0 };
       curr.tokens += p.tokens;
-      curr.hours = Math.max(curr.hours, p.hours); // Horas simultáneas de transmisión en la quincena
+      curr.hours = Math.max(curr.hours, p.hours);
       curr.followers += p.followersGain;
       combinedByPeriod.set(p.period, curr);
     }
 
     const totalBiweeklyTokensArr = Array.from(combinedByPeriod.values())
       .map(v => v.tokens)
-      .filter(t => t > 0)
+      .filter(t => t >= 200)
       .sort((a, b) => a - b);
 
     const allBwP25 = totalBiweeklyTokensArr.length > 0 ? Math.round(calculatePercentile(totalBiweeklyTokensArr, 25)) : 6500;
@@ -699,9 +702,9 @@ export async function GET(req: NextRequest) {
     const allBwP75 = totalBiweeklyTokensArr.length > 0 ? Math.round(calculatePercentile(totalBiweeklyTokensArr, 75)) : 15500;
     const allBwMax = totalBiweeklyTokensArr.length > 0 ? totalBiweeklyTokensArr[totalBiweeklyTokensArr.length - 1] : 22000;
 
-    const allTphP25 = Math.max(25, Math.round(allBwP25 / STANDARD_BIWEEK_HOURS));
-    const allTphP50 = Math.max(40, Math.round(allBwP50 / STANDARD_BIWEEK_HOURS));
-    const allTphP75 = Math.max(60, Math.round(allBwP75 / STANDARD_BIWEEK_HOURS));
+    const allTphP25 = Math.max(20, Math.round(allBwP25 / STANDARD_BIWEEK_HOURS));
+    const allTphP50 = Math.max(35, Math.round(allBwP50 / STANDARD_BIWEEK_HOURS));
+    const allTphP75 = Math.max(50, Math.round(allBwP75 / STANDARD_BIWEEK_HOURS));
 
     const grandTotalTokens = allPeriods.reduce((acc, c) => acc + c.tokens, 0);
     const grandTotalEarnings = allPeriods.reduce((acc, c) => acc + c.earnings, 0);
@@ -761,7 +764,7 @@ export async function GET(req: NextRequest) {
       },
       positioningFactors: {
         logarithmicThresholdHours: 4.0,
-        fullShiftBoost6h: 1.0, // En 6h cumple el 100% de su expectativa histórica real
+        fullShiftBoost6h: 1.0,
         shortShiftPenalty: 0.82
       },
       seasonalFactors: SEASONAL_FACTORS,
