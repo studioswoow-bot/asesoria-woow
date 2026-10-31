@@ -125,13 +125,13 @@ export function PredictiveCalculatorModal({
     const totalHours = regularHours + sundayHours + holidayHours;
 
     // Percentiles empíricos de la plataforma seleccionada
-    const p25Tph = currentPlatMetrics?.tokensPerHour?.p25 || 75;
-    const p50Tph = currentPlatMetrics?.tokensPerHour?.p50 || 110;
-    const p75Tph = currentPlatMetrics?.tokensPerHour?.p75 || 155;
+    const p25Tph = currentPlatMetrics?.tokensPerHour?.p25 || 35;
+    const p50Tph = currentPlatMetrics?.tokensPerHour?.p50 || 55;
+    const p75Tph = currentPlatMetrics?.tokensPerHour?.p75 || 80;
 
-    const p25Fph = currentPlatMetrics?.followersPerHour?.p25 || 2.2;
-    const p50Fph = currentPlatMetrics?.followersPerHour?.p50 || 4.0;
-    const p75Fph = currentPlatMetrics?.followersPerHour?.p75 || 6.8;
+    const p25Fph = currentPlatMetrics?.followersPerHour?.p25 || 1.5;
+    const p50Fph = currentPlatMetrics?.followersPerHour?.p50 || 2.8;
+    const p75Fph = currentPlatMetrics?.followersPerHour?.p75 || 4.5;
 
     // Multiplicador estacional moderado
     const seasonalInfo = data?.seasonalFactors?.[selectedMonth] || {
@@ -141,17 +141,16 @@ export function PredictiveCalculatorModal({
     };
     const seasonalFactor = seasonalInfo.factor || 1.0;
 
-    // Ajuste realista por duración del turno (Algoritmo de posicionamiento):
-    // 6 horas es el estándar requerido (1.0x a 1.08x). Menos de 4 horas penaliza (-15%) porque no posiciona la sala.
+    // Ajuste por duración del turno anclado a la meta de 6h = 1.00x (100% de su mediana histórica real)
     let shiftMultiplier = 1.0;
     if (dailyHours >= 7) {
-      shiftMultiplier = 1.12; // Turno extendido
+      shiftMultiplier = 1.05; // Turno extendido (+5% adicional por hora)
     } else if (dailyHours >= 6) {
-      shiftMultiplier = 1.06; // Meta de 6h cumplida (bono moderado y realista)
+      shiftMultiplier = 1.00; // Meta de 6h cumplida = 100% de su P25/P50/P75 histórico real
     } else if (dailyHours >= 4) {
-      shiftMultiplier = 0.96; // Turno medio
+      shiftMultiplier = 0.90; // Turno medio (-10% por menor posicionamiento)
     } else {
-      shiftMultiplier = 0.82; // Penalización por turno corto (< 4h)
+      shiftMultiplier = 0.78; // Penalización por turno corto (< 4h)
     }
 
     // Multiplicadores realistas por domingos (+15%) y festivos (+18%)

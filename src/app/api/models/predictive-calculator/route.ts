@@ -9,6 +9,7 @@ interface PlatformMetrics {
   totalHours: number;
   totalTokens: number;
   totalEarningsUsdOrEur: number;
+  biweeklyTokens: { p25: number; p50: number; p75: number; maxObserved: number };
   tokensPerHour: { p25: number; p50: number; p75: number };
   followersPerHour: { p25: number; p50: number; p75: number };
   earningsPerHour: { p25: number; p50: number; p75: number };
@@ -50,20 +51,20 @@ const COLOMBIA_HOLIDAYS_2026 = new Set([
   "2026-12-25"  // Navidad
 ]);
 
-// Temporadas webcam anuales (factor conservador y realista)
+// Factores estacionales muy moderados para no inflar artificialmente los tokens
 const SEASONAL_FACTORS: Record<number, { factor: number; season: string; reason: string }> = {
-  1: { factor: 0.90, season: "Baja", reason: "Cuesta de enero y recortes tras navidad" },
-  2: { factor: 1.04, season: "Media-Alta", reason: "San Valentín y alta afluencia privada" },
+  1: { factor: 0.94, season: "Baja", reason: "Cuesta de enero y recortes tras navidad" },
+  2: { factor: 1.02, season: "Media-Alta", reason: "San Valentín y alta afluencia privada" },
   3: { factor: 1.00, season: "Media", reason: "Estabilidad de primer trimestre" },
-  4: { factor: 0.95, season: "Media-Baja", reason: "Semanas santas y declaraciones fiscales (US)" },
-  5: { factor: 1.00, season: "Media", reason: "Estabilidad pre-vacacional" },
-  6: { factor: 1.01, season: "Media", reason: "Comienzo de verano hemisferio norte" },
-  7: { factor: 0.92, season: "Baja", reason: "Pico de vacaciones y actividades al aire libre" },
-  8: { factor: 0.90, season: "Baja", reason: "Vacaciones estivales en Europa y Norteamérica" },
-  9: { factor: 1.04, season: "Media-Alta", reason: "Retorno a rutina y aumento de tráfico en línea" },
-  10: { factor: 1.08, season: "Alta", reason: "Halloween y aumento de interacción" },
-  11: { factor: 1.14, season: "Muy Alta", reason: "Black Friday, Cyber Monday y mayor gasto" },
-  12: { factor: 1.18, season: "Pico Anual", reason: "Aguinaldos, bonos y fiestas de fin de año" }
+  4: { factor: 0.97, season: "Media-Baja", reason: "Semanas santas y declaraciones fiscales (US)" },
+  5: { factor: 0.99, season: "Media", reason: "Estabilidad pre-vacacional" },
+  6: { factor: 1.00, season: "Media", reason: "Comienzo de verano hemisferio norte" },
+  7: { factor: 0.96, season: "Baja", reason: "Pico de vacaciones y actividades al aire libre" },
+  8: { factor: 0.95, season: "Baja", reason: "Vacaciones estivales en Europa y Norteamérica" },
+  9: { factor: 1.01, season: "Media-Alta", reason: "Retorno a rutina y aumento de tráfico en línea" },
+  10: { factor: 1.03, season: "Alta", reason: "Halloween y aumento de interacción" },
+  11: { factor: 1.06, season: "Muy Alta", reason: "Black Friday, Cyber Monday y mayor gasto" },
+  12: { factor: 1.08, season: "Pico Anual", reason: "Aguinaldos, bonos y fiestas de fin de año" }
 };
 
 function calculatePercentile(sortedArr: number[], p: number): number {
@@ -87,6 +88,97 @@ function normalizePlatformName(p: string): string {
   return p.trim();
 }
 
+/**
+ * Parser exacto de CSV según el formato de cada plataforma en Drive:
+ * - Chaturbate: Fecha;Acción;;Tokens;Saldo de tokens (separado por ';', Tokens en columna 3)
+ * - Stripchat: Usuarios,Fecha,Tipo,Tokens (separado por ',', Tokens en última columna)
+ * - Streamate: Customer Nickname,Transaction Time (UTC),Duration (Seconds),Type,Performer Earned,... (columna 4)
+ */
+function parseCsvContent(text: string, hintPlatform: string | null): {
+  platform: string;
+  tokens: number;
+  earnings: number;
+  durationSeconds: number;
+} {
+  const lines = text.split('\n');
+  if (lines.length === 0) {
+    return { platform: hintPlatform || "Chaturbate", tokens: 0, earnings: 0, durationSeconds: 0 };
+  }
+
+  const header = lines[0].toLowerCase();
+
+  // 1. Formato Streamate
+  if (header.includes("performer earned") || header.includes("customer nickname") || hintPlatform === "Streamate") {
+    let earn = 0;
+    let durationSec = 0;
+    for (const l of lines.slice(1)) {
+      if (!l.trim()) continue;
+      const cols = l.split(',');
+      if (cols[2] && cols[2] !== "N/A") {
+        durationSec += parseInt(cols[2], 10) || 0;
+      }
+      if (cols[4]) {
+        const val = parseFloat(cols[4].replace('$', '').trim()) || 0;
+        if (val > 0) earn += val;
+      }
+    }
+    return {
+      platform: "Streamate",
+      tokens: Math.round(earn / 0.05),
+      earnings: Math.round(earn * 100) / 100,
+      durationSeconds: durationSec
+    };
+  }
+
+  // 2. Formato Chaturbate (separado por punto y coma ';')
+  if (header.includes("saldo de tokens") || lines[0].includes(";")) {
+    let tkSum = 0;
+    for (const l of lines.slice(1)) {
+      if (!l.trim()) continue;
+      const parts = l.split(';');
+      if (parts.length >= 4) {
+        const rawTk = parts[3].replace(/["\s\u00a0]/g, '');
+        const val = parseInt(rawTk, 10);
+        // Solo sumar propinas/shows positivos, ignorar cashouts negativos
+        if (!isNaN(val) && val > 0) {
+          tkSum += val;
+        }
+      }
+    }
+    return {
+      platform: "Chaturbate",
+      tokens: tkSum,
+      earnings: Math.round(tkSum * 0.05 * 100) / 100,
+      durationSeconds: 0
+    };
+  }
+
+  // 3. Formato Stripchat ("Usuarios,Fecha,Tipo,Tokens")
+  if (header.includes("usuarios") || header.includes("tipo,tokens") || hintPlatform === "Stripchat") {
+    let tkSum = 0;
+    for (const l of lines.slice(1)) {
+      if (!l.trim()) continue;
+      const parts = l.split(',');
+      const lastCol = parts[parts.length - 1];
+      if (lastCol) {
+        const rawTk = lastCol.replace(/["\s\u00a0]/g, '');
+        const val = parseInt(rawTk, 10);
+        if (!isNaN(val) && val > 0) {
+          tkSum += val;
+        }
+      }
+    }
+    return {
+      platform: "Stripchat",
+      tokens: tkSum,
+      earnings: Math.round(tkSum * 0.05 * 100) / 100,
+      durationSeconds: 0
+    };
+  }
+
+  return { platform: hintPlatform || "Chaturbate", tokens: 0, earnings: 0, durationSeconds: 0 };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -99,22 +191,40 @@ export async function GET(req: NextRequest) {
 
     const drive = await getDriveClient();
 
-    // 1. Obtener datos y plataformas habilitadas reales de Firestore
+    // 1. Obtener datos, cuentas activas y aliases de Firestore
     let modelData: any = null;
-    let enabledPlatformsSet = new Set<string>();
-    let aliases: string[] = [nickname, nickname.toLowerCase(), nickname.replace(/\s+/g, '_'), nickname.replace(/_/g, ' ')];
-    let platformSpecificAliases: Record<string, string[]> = {};
+    const enabledPlatformsSet = new Set<string>();
+    let searchAliases: string[] = [nickname, nickname.toLowerCase(), nickname.replace(/\s+/g, '_')];
 
     if (modelId && adminDb) {
       try {
         const docSnap = await adminDb.collection("models").doc(modelId).get();
         if (docSnap.exists) {
           modelData = docSnap.data();
-          if (modelData.name) aliases.push(modelData.name, modelData.name.toLowerCase(), modelData.name.replace(/\s+/g, '_'));
-          if (modelData.nickname) aliases.push(modelData.nickname, modelData.nickname.toLowerCase(), modelData.nickname.replace(/\s+/g, '_'));
+          if (modelData.nickname) {
+            searchAliases.push(modelData.nickname, modelData.nickname.toLowerCase());
+          }
+          // Extraer plataformas y usernames de accounts activas
+          if (Array.isArray(modelData.accounts)) {
+            modelData.accounts.forEach((acc: any) => {
+              if (acc && acc.status === "active" && acc.platformName) {
+                const normPlat = normalizePlatformName(acc.platformName);
+                if (["Chaturbate", "Stripchat", "Streamate", "LiveJasmin", "Skyprivate", "XLove"].includes(normPlat)) {
+                  enabledPlatformsSet.add(normPlat);
+                }
+                if (acc.username && !acc.username.includes("@")) {
+                  const cleanUser = String(acc.username).trim();
+                  searchAliases.push(cleanUser, cleanUser.toLowerCase());
+                }
+              }
+            });
+          }
           if (Array.isArray(modelData.platforms)) {
             modelData.platforms.forEach((p: string) => {
-              if (p) enabledPlatformsSet.add(normalizePlatformName(p));
+              const normPlat = normalizePlatformName(p);
+              if (["Chaturbate", "Stripchat", "Streamate", "LiveJasmin", "Skyprivate", "XLove"].includes(normPlat)) {
+                enabledPlatformsSet.add(normPlat);
+              }
             });
           }
         }
@@ -122,30 +232,13 @@ export async function GET(req: NextRequest) {
         const profileSnap = await adminDb.collection("modelos_profile_v2").doc(modelId).get();
         if (profileSnap.exists) {
           const pData = profileSnap.data();
-          if (pData?.generalInfo?.realName) {
-            const rn = pData.generalInfo.realName;
-            aliases.push(rn, rn.toLowerCase(), rn.replace(/\s+/g, '_'));
-          }
-          if (Array.isArray(pData?.generalInfo?.targetPlatforms)) {
-            pData.generalInfo.targetPlatforms.forEach((p: string) => {
-              if (p) enabledPlatformsSet.add(normalizePlatformName(p));
-            });
-          }
-          if (Array.isArray(pData?.apiEnabledPlatforms)) {
-            pData.apiEnabledPlatforms.forEach((p: string) => {
-              if (p) enabledPlatformsSet.add(normalizePlatformName(p));
-            });
-          }
           if (pData?.platformAliases) {
             Object.entries(pData.platformAliases).forEach(([platKey, arr]: [string, any]) => {
-              const normPlat = normalizePlatformName(platKey);
-              if (Array.isArray(arr) && arr.length > 0) {
-                platformSpecificAliases[normPlat] = [];
+              if (Array.isArray(arr)) {
                 arr.forEach(a => {
                   if (a) {
                     const clean = String(a).trim();
-                    aliases.push(clean, clean.toLowerCase(), clean.replace(/\s+/g, '_'));
-                    platformSpecificAliases[normPlat].push(clean, clean.toLowerCase(), clean.replace(/\s+/g, '_'));
+                    searchAliases.push(clean, clean.toLowerCase());
                   }
                 });
               }
@@ -157,9 +250,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    aliases = Array.from(new Set(aliases.filter(Boolean)));
+    searchAliases = Array.from(new Set(searchAliases.filter(a => a && a.length >= 3)));
 
-    // 2. Extraer históricos del Drive separados estrictamente por plataforma
+    // 2. Extraer horas históricas del Drive (BATCH_MENSUAL)
     const batchFolders = [
       { id: '1NHOLMCekNrrOUjrRgOxkUfsjC-M76C4n', platform: 'Chaturbate', currency: 'USD' as const },
       { id: '1HrtxbSUgDJP04VxKkOmIAJELkbrYilrP', platform: 'Stripchat', currency: 'USD' as const }
@@ -175,7 +268,7 @@ export async function GET(req: NextRequest) {
         const batchList = await drive.files.list({
           q: `'${bf.id}' in parents and trashed = false`,
           fields: 'files(id, name)',
-          pageSize: 50,
+          pageSize: 40,
           supportsAllDrives: true,
           includeItemsFromAllDrives: true
         });
@@ -200,9 +293,9 @@ export async function GET(req: NextRequest) {
             let targetModelKey: string | null = null;
             for (const key of Object.keys(modelsData)) {
               const kClean = key.toLowerCase().replace(/[^a-z0-9]/g, "");
-              if (aliases.some(a => {
+              if (searchAliases.some(a => {
                 const aClean = a.toLowerCase().replace(/[^a-z0-9]/g, "");
-                return aClean === kClean || (aClean.length > 3 && (kClean.includes(aClean) || aClean.includes(kClean)));
+                return aClean === kClean || (aClean.length > 4 && (kClean.includes(aClean) || aClean.includes(kClean)));
               })) {
                 targetModelKey = key;
                 break;
@@ -216,7 +309,6 @@ export async function GET(req: NextRequest) {
                 totalHours = (mStats.total_time.hours || 0) + ((mStats.total_time.minutes || 0) / 60);
               }
 
-              // Si tiene horas registradas en esta plataforma en Drive, asegurar que la plataforma esté habilitada
               if (totalHours > 0.5) {
                 enabledPlatformsSet.add(bf.platform);
               }
@@ -249,7 +341,6 @@ export async function GET(req: NextRequest) {
                 }
               }
 
-              // Calcular crecimiento de seguidores en el periodo
               let initialFollowers = 0;
               let finalFollowers = 0;
               if (mStats.details && typeof mStats.details === 'object') {
@@ -291,42 +382,43 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3. Cruzar con archivos CSV de la modelo en Drive e identificar la plataforma real del CSV (CB, SC, SM)
+    // 3. Cruzar con todos los archivos CSV de la modelo en Drive (incluyendo aliases como Engel_boss)
+    const seenCsvFileIds = new Set<string>();
     const folderPlatformCache = new Map<string, string>();
 
-    for (const alias of aliases.slice(0, 4)) {
-      if (!alias || alias.length < 3) continue;
+    for (const alias of searchAliases) {
       try {
         const csvSearch = await drive.files.list({
           q: `name contains '${alias.replace(/'/g, "\\'")}' and mimeType = 'text/csv' and trashed = false`,
           fields: 'files(id, name, parents)',
-          pageSize: 40,
+          pageSize: 50,
           supportsAllDrives: true,
           includeItemsFromAllDrives: true
         });
 
         const csvFiles = csvSearch.data.files || [];
         for (const cf of csvFiles) {
-          if (!cf.id || !cf.name) continue;
+          if (!cf.id || !cf.name || seenCsvFileIds.has(cf.id)) continue;
+          seenCsvFileIds.add(cf.id);
+
           const matchPeriod = cf.name.match(/(\d{4}-\d{2}-\d{2}_to_\d{4}-\d{2}-\d{2})/);
           if (!matchPeriod) continue;
           const periodKey = matchPeriod[1];
           const monthNum = parseInt(periodKey.substring(5, 7), 10) || 1;
 
-          // Identificar carpeta padre (CB, SC, SM) para no mezclar plataformas
-          let parentPlatform: string | null = null;
+          let hintPlat: string | null = null;
           if (cf.parents && cf.parents[0]) {
             const pId = cf.parents[0];
             if (folderPlatformCache.has(pId)) {
-              parentPlatform = folderPlatformCache.get(pId)!;
+              hintPlat = folderPlatformCache.get(pId)!;
             } else {
               try {
                 const parentMeta = await drive.files.get({ fileId: pId, fields: 'name', supportsAllDrives: true });
                 const pName = (parentMeta.data.name || "").toUpperCase();
-                if (pName === "CB" || pName.includes("CHATURBATE")) parentPlatform = "Chaturbate";
-                else if (pName === "SC" || pName.includes("STRIPCHAT")) parentPlatform = "Stripchat";
-                else if (pName === "SM" || pName.includes("STREAMATE")) parentPlatform = "Streamate";
-                if (parentPlatform) folderPlatformCache.set(pId, parentPlatform);
+                if (pName === "CB" || pName.includes("CHATURBATE")) hintPlat = "Chaturbate";
+                else if (pName === "SC" || pName.includes("STRIPCHAT")) hintPlat = "Stripchat";
+                else if (pName === "SM" || pName.includes("STREAMATE")) hintPlat = "Streamate";
+                if (hintPlat) folderPlatformCache.set(pId, hintPlat);
               } catch {}
             }
           }
@@ -339,76 +431,38 @@ export async function GET(req: NextRequest) {
             });
 
             const text = typeof csvContent.data === 'string' ? csvContent.data : "";
-            const lines = text.split('\n');
-            const isStreamate = text.includes("Customer Nickname") || text.includes("Performer Earned") || parentPlatform === "Streamate";
-            const isXLove = text.toLowerCase().includes("xlove") || text.includes("Euros");
+            const parsedCsv = parseCsvContent(text, hintPlat);
+            const plat = parsedCsv.platform;
 
-            let tokensInCsv = 0;
-            let earningsInCsv = 0;
-            let totalDurationSeconds = 0;
-
-            if (isStreamate) {
-              parentPlatform = "Streamate";
-              for (const line of lines.slice(1)) {
-                if (!line.trim()) continue;
-                const cols = line.split(',');
-                if (cols[2] && cols[2] !== "N/A") {
-                  totalDurationSeconds += parseInt(cols[2], 10) || 0;
-                }
-                if (cols[4]) {
-                  const val = parseFloat(cols[4].replace('$', '').trim()) || 0;
-                  earningsInCsv += val;
-                }
-              }
-              tokensInCsv = Math.round(earningsInCsv / 0.05);
-              if (earningsInCsv > 0) enabledPlatformsSet.add("Streamate");
-            } else {
-              for (const line of lines.slice(1)) {
-                if (!line.trim()) continue;
-                const sep = line.includes(';') ? ';' : ',';
-                const parts = line.split(sep);
-                for (const part of parts) {
-                  const num = parseInt(part.trim(), 10);
-                  if (!isNaN(num) && num > 0 && num < 100000 && !part.includes('-') && !part.includes(':')) {
-                    tokensInCsv += num;
-                    break;
-                  }
-                }
-              }
-              earningsInCsv = tokensInCsv * 0.05;
+            if (parsedCsv.tokens > 0 || parsedCsv.earnings > 0) {
+              enabledPlatformsSet.add(plat);
             }
 
-            if (parentPlatform === "Streamate" && earningsInCsv > 0) {
-              // En Streamate el CSV reporta duración en shows pagos; el tiempo total en línea suele ser ~3.5x el tiempo en show privado
-              const estimatedOnlineHours = Math.max(12, Math.round((totalDurationSeconds / 3600) * 3.5 * 10) / 10);
-              periodMap.set(`${periodKey}_Streamate`, {
+            const mapKey = `${periodKey}_${plat}`;
+            const existing = periodMap.get(mapKey);
+
+            // Si hay horas en Chaturbate en esa misma quincena, la modelo hace multi-streaming simultáneo
+            const cbSamePeriod = periodMap.get(`${periodKey}_Chaturbate`);
+            const fallbackHours = cbSamePeriod && cbSamePeriod.hours > 0 ? cbSamePeriod.hours : 58;
+
+            if (existing) {
+              existing.tokens = Math.max(existing.tokens, parsedCsv.tokens);
+              existing.earnings = Math.max(existing.earnings, parsedCsv.earnings);
+              if (existing.hours === 0) existing.hours = fallbackHours;
+            } else if (parsedCsv.tokens > 0) {
+              periodMap.set(mapKey, {
                 period: periodKey,
                 month: monthNum,
-                platform: "Streamate",
-                currency: "USD",
-                hours: estimatedOnlineHours,
-                tokens: tokensInCsv,
-                earnings: Math.round(earningsInCsv * 100) / 100,
-                followersGain: Math.round(estimatedOnlineHours * 2.5),
+                platform: plat,
+                currency: plat === "XLove" ? "EUR" : "USD",
+                hours: fallbackHours,
+                tokens: parsedCsv.tokens,
+                earnings: parsedCsv.earnings,
+                followersGain: Math.round(fallbackHours * 1.8),
                 dailyHours: [],
                 sundayHours: 0,
                 holidayHours: 0
               });
-            } else if (parentPlatform) {
-              const key = `${periodKey}_${parentPlatform}`;
-              const existing = periodMap.get(key);
-              if (existing) {
-                existing.tokens = Math.max(existing.tokens, tokensInCsv);
-                existing.earnings = Math.max(existing.earnings, Math.round(earningsInCsv * 100) / 100);
-              }
-            } else {
-              // Si no tenía carpeta padre identificada, asociar al periodo existente
-              for (const [k, p] of Array.from(periodMap.entries())) {
-                if (p.period === periodKey && p.tokens === 0) {
-                  p.tokens = tokensInCsv;
-                  p.earnings = Math.round(earningsInCsv * 100) / 100;
-                }
-              }
             }
           } catch (eCsv) {
             console.warn(`Error leyendo CSV ${cf.name}:`, eCsv);
@@ -419,19 +473,23 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Si la modelo no tenía plataformas configuradas en absoluto, usar las detectadas o Chaturbate por defecto
-    if (enabledPlatformsSet.size === 0) {
-      enabledPlatformsSet.add("Chaturbate");
-    }
+    // Filtrar solo las plataformas donde realmente tiene actividad o están habilitadas
+    const allPeriods = Array.from(periodMap.values()).filter(p => p.tokens > 0 || p.hours > 0);
+    const platformsWithData = new Set(allPeriods.map(p => p.platform));
 
-    const enabledPlatforms = Array.from(enabledPlatformsSet);
-    const allPeriods = Array.from(periodMap.values()).filter(p => enabledPlatformsSet.has(p.platform));
+    // Si hay plataformas con datos reales en Drive, priorizar esas plataformas + las de negocio principales
+    const finalEnabledPlatforms = Array.from(enabledPlatformsSet).filter(
+      p => platformsWithData.has(p) || ["Chaturbate", "Stripchat", "Streamate"].includes(p)
+    );
+    if (finalEnabledPlatforms.length === 0) finalEnabledPlatforms.push("Chaturbate");
 
-    // 4. Construir métricas específicas y realistas POR CADA PLATAFORMA habilitada
+    // 4. Construir métricas específicas POR CADA PLATAFORMA basadas directamente en sus quincenas reales
     const platformBreakdown: Record<string, PlatformMetrics> = {};
+    const STANDARD_BIWEEK_HOURS = 66; // 6 horas x 11 días hábiles
 
-    for (const plat of enabledPlatforms) {
-      const platPeriods = allPeriods.filter(p => p.platform === plat && p.hours > 0);
+    for (const plat of finalEnabledPlatforms) {
+      const platPeriods = allPeriods.filter(p => p.platform === plat && (p.tokens > 0 || p.hours > 0));
+      const biweeklyTokensSamples: number[] = [];
       const tphSamples: number[] = [];
       const fphSamples: number[] = [];
       let sumHours = 0;
@@ -443,33 +501,39 @@ export async function GET(req: NextRequest) {
         sumTokens += pp.tokens;
         sumEarnings += pp.earnings;
 
-        if (pp.tokens > 0 && pp.hours >= 4) {
-          tphSamples.push(pp.tokens / pp.hours);
+        if (pp.tokens > 0) {
+          biweeklyTokensSamples.push(pp.tokens);
+          const effectiveH = pp.hours >= 20 ? pp.hours : STANDARD_BIWEEK_HOURS;
+          tphSamples.push(pp.tokens / effectiveH);
         }
-        if (pp.followersGain > 0 && pp.hours >= 4) {
+        if (pp.followersGain > 0 && pp.hours >= 15) {
           fphSamples.push(pp.followersGain / pp.hours);
         }
       }
 
-      // Valores base conservadores y realistas si una plataforma recién habilitada aún tiene pocos CSVs cruzados
-      // Evita inflar números y mantiene precisión empírica
-      let defaultTph = [75, 110, 155]; // Conservador: ~3.75 a $7.75 USD brutos/hora
-      let defaultFph = [2.2, 4.0, 6.8];
+      // Valores conservadores por defecto si una plataforma tiene 0 archivos CSV
+      const sortedBiweeklyTokens = biweeklyTokensSamples.length > 0
+        ? [...biweeklyTokensSamples].sort((a, b) => a - b)
+        : [2200, 3500, 5000];
 
-      if (plat === "Stripchat") {
-        defaultTph = [70, 105, 150];
-        defaultFph = [3.0, 5.2, 8.5];
-      } else if (plat === "Streamate" || plat === "LiveJasmin" || plat === "Skyprivate") {
-        defaultTph = [85, 125, 175]; // Equivalente en tokens ($0.05) de ganancias privadas
-        defaultFph = [1.5, 2.8, 4.5];
-      }
+      const sortedTph = tphSamples.length > 0
+        ? [...tphSamples].sort((a, b) => a - b)
+        : [33, 53, 75];
 
-      const sortedTph = tphSamples.length > 0 ? [...tphSamples].sort((a, b) => a - b) : defaultTph;
-      const sortedFph = fphSamples.length > 0 ? [...fphSamples].sort((a, b) => a - b) : defaultFph;
+      const sortedFph = fphSamples.length > 0
+        ? [...fphSamples].sort((a, b) => a - b)
+        : [1.5, 2.8, 4.5];
 
-      const p25T = Math.round(calculatePercentile(sortedTph, 25));
-      const p50T = Math.round(calculatePercentile(sortedTph, 50));
-      const p75T = Math.round(calculatePercentile(sortedTph, 75));
+      const bwP25 = Math.round(calculatePercentile(sortedBiweeklyTokens, 25));
+      const bwP50 = Math.round(calculatePercentile(sortedBiweeklyTokens, 50));
+      const bwP75 = Math.round(calculatePercentile(sortedBiweeklyTokens, 75));
+      const bwMax = sortedBiweeklyTokens[sortedBiweeklyTokens.length - 1] || bwP75;
+
+      // Anclar la tasa por hora a los percentiles quincenales reales divididos por las 66h estándar
+      // Así, en 6h x 11 días (66h), la calculadora jamás superará el P25/P50/P75 histórico real de esa página
+      const p25T = Math.max(10, Math.round(bwP25 / STANDARD_BIWEEK_HOURS));
+      const p50T = Math.max(15, Math.round(bwP50 / STANDARD_BIWEEK_HOURS));
+      const p75T = Math.max(22, Math.round(bwP75 / STANDARD_BIWEEK_HOURS));
 
       const p25F = Math.round(calculatePercentile(sortedFph, 25) * 10) / 10;
       const p50F = Math.round(calculatePercentile(sortedFph, 50) * 10) / 10;
@@ -484,77 +548,85 @@ export async function GET(req: NextRequest) {
         totalHours: Math.round(sumHours * 10) / 10,
         totalTokens: sumTokens,
         totalEarningsUsdOrEur: Math.round(sumEarnings * 100) / 100,
+        biweeklyTokens: {
+          p25: bwP25,
+          p50: bwP50,
+          p75: bwP75,
+          maxObserved: bwMax
+        },
         tokensPerHour: {
-          p25: Math.max(40, p25T),
-          p50: Math.max(65, p50T),
-          p75: Math.max(95, p75T)
+          p25: p25T,
+          p50: p50T,
+          p75: p75T
         },
         followersPerHour: {
-          p25: Math.max(1.0, p25F),
-          p50: Math.max(2.0, p50F),
-          p75: Math.max(3.5, p75F)
+          p25: Math.max(0.8, p25F),
+          p50: Math.max(1.5, p50F),
+          p75: Math.max(2.5, p75F)
         },
         earningsPerHour: {
-          p25: Math.round(Math.max(40, p25T) * 0.05 * 100) / 100,
-          p50: Math.round(Math.max(65, p50T) * 0.05 * 100) / 100,
-          p75: Math.round(Math.max(95, p75T) * 0.05 * 100) / 100
+          p25: Math.round(p25T * 0.05 * 100) / 100,
+          p50: Math.round(p50T * 0.05 * 100) / 100,
+          p75: Math.round(p75T * 0.05 * 100) / 100
         }
       };
     }
 
-    // 5. Construir opción TOTALIZADA ("ALL") que consolida todas las plataformas habilitadas de la modelo
-    // Nota importante sobre multi-streaming (transmitir en varias páginas al mismo tiempo):
-    // Si la modelo transmite 6 horas simultáneamente en sus plataformas habilitadas, el rendimiento total
-    // es la suma ponderada de sus páginas activas (ajustada por un factor de atención dividida de 0.85x por página adicional
-    // para jamás generar falsas expectativas ni duplicar irrealmente las ganancias).
-    let totalP25T = 0;
-    let totalP50T = 0;
-    let totalP75T = 0;
-    let totalP25F = 0;
-    let totalP50F = 0;
-    let totalP75F = 0;
-    let grandTotalHours = 0;
-    let grandTotalTokens = 0;
-    let grandTotalEarnings = 0;
+    // 5. Construir opción TOTALIZADA ("ALL") sumando los tokens reales de todas sus páginas en cada quincena
+    const combinedByPeriod = new Map<string, { tokens: number; hours: number; followers: number }>();
+    for (const p of allPeriods) {
+      const curr = combinedByPeriod.get(p.period) || { tokens: 0, hours: 0, followers: 0 };
+      curr.tokens += p.tokens;
+      curr.hours = Math.max(curr.hours, p.hours); // Horas simultáneas de transmisión en la quincena
+      curr.followers += p.followersGain;
+      combinedByPeriod.set(p.period, curr);
+    }
 
-    enabledPlatforms.forEach((plat, idx) => {
-      const b = platformBreakdown[plat];
-      // La plataforma principal suma 100% de su tasa real; las plataformas secundarias en simultáneo suman con factor realista (0.65)
-      const multiStreamWeight = idx === 0 ? 1.0 : 0.65;
-      totalP25T += Math.round(b.tokensPerHour.p25 * multiStreamWeight);
-      totalP50T += Math.round(b.tokensPerHour.p50 * multiStreamWeight);
-      totalP75T += Math.round(b.tokensPerHour.p75 * multiStreamWeight);
+    const totalBiweeklyTokensArr = Array.from(combinedByPeriod.values())
+      .map(v => v.tokens)
+      .filter(t => t > 0)
+      .sort((a, b) => a - b);
 
-      totalP25F += b.followersPerHour.p25 * multiStreamWeight;
-      totalP50F += b.followersPerHour.p50 * multiStreamWeight;
-      totalP75F += b.followersPerHour.p75 * multiStreamWeight;
+    const allBwP25 = totalBiweeklyTokensArr.length > 0 ? Math.round(calculatePercentile(totalBiweeklyTokensArr, 25)) : 6500;
+    const allBwP50 = totalBiweeklyTokensArr.length > 0 ? Math.round(calculatePercentile(totalBiweeklyTokensArr, 50)) : 10500;
+    const allBwP75 = totalBiweeklyTokensArr.length > 0 ? Math.round(calculatePercentile(totalBiweeklyTokensArr, 75)) : 15500;
+    const allBwMax = totalBiweeklyTokensArr.length > 0 ? totalBiweeklyTokensArr[totalBiweeklyTokensArr.length - 1] : 22000;
 
-      grandTotalHours += b.totalHours;
-      grandTotalTokens += b.totalTokens;
-      grandTotalEarnings += b.totalEarningsUsdOrEur;
-    });
+    const allTphP25 = Math.max(25, Math.round(allBwP25 / STANDARD_BIWEEK_HOURS));
+    const allTphP50 = Math.max(40, Math.round(allBwP50 / STANDARD_BIWEEK_HOURS));
+    const allTphP75 = Math.max(60, Math.round(allBwP75 / STANDARD_BIWEEK_HOURS));
+
+    const grandTotalTokens = allPeriods.reduce((acc, c) => acc + c.tokens, 0);
+    const grandTotalEarnings = allPeriods.reduce((acc, c) => acc + c.earnings, 0);
+    const grandTotalHours = Array.from(combinedByPeriod.values()).reduce((acc, c) => acc + c.hours, 0);
 
     platformBreakdown["ALL"] = {
       platform: "ALL",
       currency: "USD",
-      periodsCount: allPeriods.length,
+      periodsCount: combinedByPeriod.size,
       totalHours: Math.round(grandTotalHours * 10) / 10,
       totalTokens: grandTotalTokens,
       totalEarningsUsdOrEur: Math.round(grandTotalEarnings * 100) / 100,
+      biweeklyTokens: {
+        p25: allBwP25,
+        p50: allBwP50,
+        p75: allBwP75,
+        maxObserved: allBwMax
+      },
       tokensPerHour: {
-        p25: totalP25T,
-        p50: totalP50T,
-        p75: totalP75T
+        p25: allTphP25,
+        p50: allTphP50,
+        p75: allTphP75
       },
       followersPerHour: {
-        p25: Math.round(totalP25F * 10) / 10,
-        p50: Math.round(totalP50F * 10) / 10,
-        p75: Math.round(totalP75F * 10) / 10
+        p25: 2.2,
+        p50: 3.8,
+        p75: 6.2
       },
       earningsPerHour: {
-        p25: Math.round(totalP25T * 0.05 * 100) / 100,
-        p50: Math.round(totalP50T * 0.05 * 100) / 100,
-        p75: Math.round(totalP75T * 0.05 * 100) / 100
+        p25: Math.round(allTphP25 * 0.05 * 100) / 100,
+        p50: Math.round(allTphP50 * 0.05 * 100) / 100,
+        p75: Math.round(allTphP75 * 0.05 * 100) / 100
       }
     };
 
@@ -564,26 +636,26 @@ export async function GET(req: NextRequest) {
         id: modelId,
         nickname: nickname || modelData?.nickname || "Modelo",
         name: modelData?.name || nickname,
-        enabledPlatforms
+        enabledPlatforms: finalEnabledPlatforms
       },
       stats: {
         totalObservedDays,
         sundaySessionsCount,
         holidaySessionsCount,
-        periodsCount: allPeriods.length
+        periodsCount: combinedByPeriod.size
       },
       platformBreakdown,
       calendarAverages: {
         standardWorkDaysPerBiweek: 11,
         sundaysPerBiweek: 2,
         holidaysPerBiweek: 1,
-        sundayBoostRatio: 1.15,  // +15% realista en domingos
-        holidayBoostRatio: 1.18  // +18% realista en festivos
+        sundayBoostRatio: 1.15,
+        holidayBoostRatio: 1.18
       },
       positioningFactors: {
         logarithmicThresholdHours: 4.0,
-        fullShiftBoost6h: 1.12,   // +12% realista por cumplir las 6h (sin sobre-inflar)
-        shortShiftPenalty: 0.85   // -15% cuando transmite menos de 4h por barrera logarítmica
+        fullShiftBoost6h: 1.0, // En 6h cumple el 100% de su expectativa histórica real
+        shortShiftPenalty: 0.82
       },
       seasonalFactors: SEASONAL_FACTORS,
       periods: allPeriods.sort((a, b) => b.period.localeCompare(a.period))
