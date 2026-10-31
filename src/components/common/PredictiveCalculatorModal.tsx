@@ -32,8 +32,13 @@ export function PredictiveCalculatorModal({
   const [attendHolidays, setAttendHolidays] = useState<number>(0); // Festivos asistidos (0 a 2 en la quincena)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedPlatform, setSelectedPlatform] = useState<string>("Chaturbate");
+  
+  // Tasa de cambio (TRM) personalizable por la modelo o estudio
   const [exchangeRateUsdCop, setExchangeRateUsdCop] = useState<number>(4100);
   const [exchangeRateEurUsd, setExchangeRateEurUsd] = useState<number>(1.08);
+
+  // Porcentaje asignado a la modelo (fijado en 60% por solicitud de administración)
+  const MODEL_SHARE_PERCENTAGE = 0.60;
 
   useEffect(() => {
     if (!isOpen || !model) return;
@@ -137,7 +142,7 @@ export function PredictiveCalculatorModal({
       return Math.round(regFollowers + sunFollowers + holFollowers);
     };
 
-    // Tokens en percentiles
+    // Tokens en percentiles (Generación en plataforma)
     const tokensP25 = calcTokensForTph(p25Tph);
     const tokensP50 = calcTokensForTph(p50Tph);
     const tokensP75 = calcTokensForTph(p75Tph);
@@ -147,11 +152,15 @@ export function PredictiveCalculatorModal({
     const followersP50 = calcFollowersForFph(p50Fph);
     const followersP75 = calcFollowersForFph(p75Fph);
 
-    // Conversión a dinero:
-    // En tokens (CB y SC): 1 token = $0.05 USD
-    const usdP25 = tokensP25 * 0.05;
-    const usdP50 = tokensP50 * 0.05;
-    const usdP75 = tokensP75 * 0.05;
+    // Conversión a dinero bruto en plataforma (1 token = $0.05 USD en CB/SC):
+    const grossUsdP25 = tokensP25 * 0.05;
+    const grossUsdP50 = tokensP50 * 0.05;
+    const grossUsdP75 = tokensP75 * 0.05;
+
+    // GANANCIA NETA PARA LA MODELO: EXACTAMENTE EL 60%
+    const modelNetUsdP25 = grossUsdP25 * MODEL_SHARE_PERCENTAGE;
+    const modelNetUsdP50 = grossUsdP50 * MODEL_SHARE_PERCENTAGE;
+    const modelNetUsdP75 = grossUsdP75 * MODEL_SHARE_PERCENTAGE;
 
     // Convertir si la plataforma es XLove (EUR)
     const toPlatformCurrency = (usdVal: number) => {
@@ -161,13 +170,14 @@ export function PredictiveCalculatorModal({
       return usdVal;
     };
 
-    const biweeklyPlatformP25 = toPlatformCurrency(usdP25);
-    const biweeklyPlatformP50 = toPlatformCurrency(usdP50);
-    const biweeklyPlatformP75 = toPlatformCurrency(usdP75);
+    const biweeklyPlatformP25 = toPlatformCurrency(modelNetUsdP25);
+    const biweeklyPlatformP50 = toPlatformCurrency(modelNetUsdP50);
+    const biweeklyPlatformP75 = toPlatformCurrency(modelNetUsdP75);
 
-    const biweeklyCopP25 = usdP25 * exchangeRateUsdCop;
-    const biweeklyCopP50 = usdP50 * exchangeRateUsdCop;
-    const biweeklyCopP75 = usdP75 * exchangeRateUsdCop;
+    // Liquidación en COP con la TRM ingresada por la modelo
+    const biweeklyCopP25 = modelNetUsdP25 * exchangeRateUsdCop;
+    const biweeklyCopP50 = modelNetUsdP50 * exchangeRateUsdCop;
+    const biweeklyCopP75 = modelNetUsdP75 * exchangeRateUsdCop;
 
     return {
       totalHours,
@@ -225,14 +235,14 @@ export function PredictiveCalculatorModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-xl font-bold font-display flex items-center gap-2">
-                  Calculadora Predictiva: Tokens & Seguidores
+                  Calculadora Predictiva: Ganancias de la Modelo (60%)
                 </h3>
                 <span className="text-[10px] bg-primary/20 text-primary border border-primary/30 px-2 py-0.5 rounded-full font-bold">
                   {model.name} (@{model.nickname || "modelo"})
                 </span>
               </div>
               <p className="text-xs text-text-muted mt-0.5">
-                Estimaciones estadísticas rigurosas (P25 Conservador, P50 Esperado, P75 Destacado) basadas en históricos de Drive.
+                Estimaciones netas (60% para la modelo) basadas en los históricos reales de Google Drive con TRM ajustable.
               </p>
             </div>
           </div>
@@ -258,6 +268,58 @@ export function PredictiveCalculatorModal({
             </div>
           ) : (
             <>
+              {/* Barra de Ajuste de TRM y Moneda */}
+              <div className="bg-gradient-to-r from-emerald-500/10 via-primary/10 to-transparent border border-emerald-500/30 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="size-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                    <span className="material-symbols-outlined">currency_exchange</span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-text-main flex items-center gap-2">
+                      <span>Valor del Dólar (TRM) y Participación</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-black">
+                        Pago Modelo: 60%
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-text-muted">
+                      Ingresa el valor del dólar acordado para liquidar tus ganancias exactas en COP.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:w-44">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-muted">$</span>
+                    <input
+                      type="number"
+                      step="10"
+                      min="3000"
+                      max="6000"
+                      value={exchangeRateUsdCop}
+                      onChange={(e) => setExchangeRateUsdCop(parseFloat(e.target.value) || 0)}
+                      className="w-full bg-background-dark border border-emerald-500/40 rounded-xl pl-7 pr-12 py-2 text-sm font-black text-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      placeholder="4100"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-text-muted">COP</span>
+                  </div>
+
+                  {platformCurrency === "EUR" && (
+                    <div className="relative flex-1 sm:w-36">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-text-muted">€/$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.8"
+                        max="1.5"
+                        value={exchangeRateEurUsd}
+                        onChange={(e) => setExchangeRateEurUsd(parseFloat(e.target.value) || 1.08)}
+                        className="w-full bg-background-dark border border-primary/40 rounded-xl pl-8 pr-3 py-2 text-sm font-black text-primary focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Controles de Simulación de Asistencia */}
               <div className="bg-text-main/5 border border-text-main/10 rounded-2xl p-5 space-y-5">
                 <div className="flex items-center justify-between border-b border-text-main/10 pb-3">
@@ -400,15 +462,15 @@ export function PredictiveCalculatorModal({
                 </div>
               </div>
 
-              {/* MATRIZ DE PERCENTILES: P25, P50, P75 (Sin falsas expectativas) */}
+              {/* MATRIZ DE PERCENTILES: P25, P50, P75 - GANANCIAS NETAS DE LA MODELO (60%) */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-text-muted flex items-center gap-2">
                     <span className="material-symbols-outlined text-primary text-sm">query_stats</span>
-                    Rangos de Probabilidad Realista (Percentiles P25, P50, P75)
+                    Tus Ganancias Estimadas al 60% (P25 Conservador, P50 Esperado, P75 Destacado)
                   </h4>
-                  <span className="text-[10px] text-text-muted">
-                    {dailyHours >= 6 ? "Turno completo: Algoritmo desbloqueado (+22% efectividad)" : "Turno < 6h: Penalizado por barrera algorítmica"}
+                  <span className="text-[10px] text-emerald-400 font-bold">
+                    {dailyHours >= 6 ? "Cumple 6h: Algoritmo óptimo (+22% efectividad)" : "Turno < 6h: Penalizado por barrera algorítmica"}
                   </span>
                 </div>
 
@@ -422,7 +484,7 @@ export function PredictiveCalculatorModal({
 
                     <div className="space-y-2">
                       <div>
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Quincena</div>
+                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Producidos</div>
                         <div className="text-2xl font-black text-text-main">
                           {calculations.tokens.p25.toLocaleString()} <span className="text-xs font-normal text-text-muted">tk</span>
                         </div>
@@ -436,12 +498,12 @@ export function PredictiveCalculatorModal({
                       </div>
 
                       <div className="border-t border-text-main/10 pt-2">
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Facturación Neta Estimada</div>
+                        <div className="text-[10px] text-emerald-400 uppercase font-black">Tu Ganancia Neta (60%)</div>
                         <div className="text-xl font-black text-emerald-400">
                           {currencySymbol}{calculations.biweekly.p25.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-xs font-semibold text-text-muted">
-                          ≈ ${Math.round(calculations.biweeklyCop.p25).toLocaleString("es-CO")} COP / Q
+                        <div className="text-xs font-semibold text-text-main">
+                          ≈ ${Math.round(calculations.biweeklyCop.p25).toLocaleString("es-CO")} COP / Quincena
                         </div>
                         <div className="text-[10px] text-text-muted mt-0.5">
                           Mensual (2Q): ${Math.round(calculations.monthlyCop.p25).toLocaleString("es-CO")} COP
@@ -450,7 +512,7 @@ export function PredictiveCalculatorModal({
                     </div>
 
                     <div className="text-[9px] text-text-muted bg-text-main/5 p-2 rounded-lg leading-tight">
-                      Días de tráfico moderado o baja interacción de propinas. Es el resultado mínimo garantizado si asiste las horas pactadas.
+                      Días de tráfico tranquilo o propinas bajas. Es lo mínimo que ganas para ti si asistes las horas pactadas.
                     </div>
                   </div>
 
@@ -463,7 +525,7 @@ export function PredictiveCalculatorModal({
 
                     <div className="space-y-2">
                       <div>
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Quincena</div>
+                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Producidos</div>
                         <div className="text-3xl font-black text-text-main">
                           {calculations.tokens.p50.toLocaleString()} <span className="text-xs font-normal text-primary">tk</span>
                         </div>
@@ -477,21 +539,21 @@ export function PredictiveCalculatorModal({
                       </div>
 
                       <div className="border-t border-text-main/10 pt-2">
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Facturación Neta Estimada</div>
+                        <div className="text-[10px] text-emerald-400 uppercase font-black">Tu Ganancia Neta (60%)</div>
                         <div className="text-2xl font-black text-emerald-400">
                           {currencySymbol}{calculations.biweekly.p50.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-sm font-bold text-text-main">
-                          ≈ ${Math.round(calculations.biweeklyCop.p50).toLocaleString("es-CO")} COP / Q
+                        <div className="text-sm font-black text-text-main">
+                          ≈ ${Math.round(calculations.biweeklyCop.p50).toLocaleString("es-CO")} COP / Quincena
                         </div>
-                        <div className="text-xs font-semibold text-accent-gold mt-0.5">
+                        <div className="text-xs font-bold text-accent-gold mt-0.5">
                           Mensual (2Q): ${Math.round(calculations.monthlyCop.p50).toLocaleString("es-CO")} COP
                         </div>
                       </div>
                     </div>
 
                     <div className="text-[9px] text-text-muted bg-primary/10 p-2 rounded-lg leading-tight border border-primary/20">
-                      Rendimiento normal de la modelo con buena energía y cumplimiento del horario de 6 horas diarias.
+                      Rendimiento normal de tu perfil con buena interacción y cumpliendo el horario de 6 horas diarias.
                     </div>
                   </div>
 
@@ -504,7 +566,7 @@ export function PredictiveCalculatorModal({
 
                     <div className="space-y-2">
                       <div>
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Quincena</div>
+                        <div className="text-[10px] text-text-muted uppercase font-bold">Tokens Producidos</div>
                         <div className="text-2xl font-black text-text-main">
                           {calculations.tokens.p75.toLocaleString()} <span className="text-xs font-normal text-accent-gold">tk</span>
                         </div>
@@ -518,12 +580,12 @@ export function PredictiveCalculatorModal({
                       </div>
 
                       <div className="border-t border-text-main/10 pt-2">
-                        <div className="text-[10px] text-text-muted uppercase font-bold">Facturación Neta Estimada</div>
+                        <div className="text-[10px] text-emerald-400 uppercase font-black">Tu Ganancia Neta (60%)</div>
                         <div className="text-xl font-black text-emerald-400">
                           {currencySymbol}{calculations.biweekly.p75.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
-                        <div className="text-xs font-semibold text-text-muted">
-                          ≈ ${Math.round(calculations.biweeklyCop.p75).toLocaleString("es-CO")} COP / Q
+                        <div className="text-xs font-semibold text-text-main">
+                          ≈ ${Math.round(calculations.biweeklyCop.p75).toLocaleString("es-CO")} COP / Quincena
                         </div>
                         <div className="text-[10px] text-text-muted mt-0.5">
                           Mensual (2Q): ${Math.round(calculations.monthlyCop.p75).toLocaleString("es-CO")} COP
@@ -532,7 +594,7 @@ export function PredictiveCalculatorModal({
                     </div>
 
                     <div className="text-[9px] text-text-muted bg-text-main/5 p-2 rounded-lg leading-tight">
-                      Captura de ballenas (grandes propinas), shows privados constantes y asistencia a domingos/festivos de alta demanda.
+                      Captura de miembros VIP (ballenas), privados frecuentes y asistencia a domingos/festivos de alta demanda.
                     </div>
                   </div>
                 </div>
@@ -545,15 +607,15 @@ export function PredictiveCalculatorModal({
                   <div className="text-xs">
                     <div className="font-bold text-emerald-400">¿Por qué asistir domingos y festivos?</div>
                     <div className="text-text-muted text-[11px] mt-0.5">
-                      Los domingos generan <strong className="text-text-main">+20% más tokens por hora</strong> y los festivos <strong className="text-text-main">+25%</strong> debido a la baja oferta de modelos conectadas y mayor permanencia de usuarios internacionales.
+                      Los domingos generan <strong className="text-text-main">+20% más tokens por hora</strong> y los festivos <strong className="text-text-main">+25%</strong> debido a la menor competencia y mayor afluencia de usuarios internacionales.
                     </div>
                   </div>
                 </div>
                 {(attendSundays > 0 || attendHolidays > 0) && (
                   <div className="text-right">
-                    <span className="text-[10px] uppercase font-bold text-emerald-400 block">Bono Estimado</span>
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 block">Tu Bono Neto (60%)</span>
                     <span className="text-sm font-black text-text-main">
-                      +{Math.round((attendSundays * 1.20 + attendHolidays * 1.25) * dailyHours * (data?.tokensPerHour?.p50 || 165) * 0.05 * exchangeRateUsdCop).toLocaleString("es-CO")} COP
+                      +{Math.round((attendSundays * 1.20 + attendHolidays * 1.25) * dailyHours * (data?.tokensPerHour?.p50 || 165) * 0.05 * MODEL_SHARE_PERCENTAGE * exchangeRateUsdCop).toLocaleString("es-CO")} COP
                     </span>
                   </div>
                 )}
@@ -566,7 +628,7 @@ export function PredictiveCalculatorModal({
         <div className="p-4 border-t border-text-main/10 flex items-center justify-between bg-text-main/5">
           <div className="text-[10px] text-text-muted flex items-center gap-1.5">
             <span className="material-symbols-outlined text-xs text-primary">verified</span>
-            <span>Datos actualizados automáticamente en cada quincena desde Google Drive.</span>
+            <span>Liquidación transparente para modelos calculada al 60% neto con TRM personalizada.</span>
           </div>
           <button
             onClick={onClose}
